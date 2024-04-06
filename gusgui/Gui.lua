@@ -1,6 +1,6 @@
 local function gusgui(gusgui_path)
 GUSGUI_FILEPATH = function (path)
-    return gusgui_path:gsub("/$", "") .. "/" .. path
+    return "mods/damagelog/gusgui/" .. path
 end
 dofile_once(GUSGUI_FILEPATH("class.lua"))
 dofile_once(GUSGUI_FILEPATH("GuiElement.lua"))
@@ -302,16 +302,16 @@ end
 function Gui:GetRootElemXY(elem)
     local x, y = self.baseX, self.baseY
     local elemSize = elem:GetElementSize()
-    if elem._config.margin.right ~= 0 then
+    if elem._config.margin.right ~= 0 and elem._config.margin.right ~= nil then
         x = (self.screenW - elemSize.width) - elem._config.margin.right
     end
-    if elem._config.margin.left ~= 0 then
+    if elem._config.margin.left ~= 0 and elem._config.margin.left ~= nil then
         x = elem._config.margin.left
     end
-    if elem._config.margin.top ~= 0 then
+    if elem._config.margin.top ~= 0 and elem._config.margin.top ~= nil then
         y = elem._config.margin.top
     end
-    if elem._config.margin.bottom ~= 0 then
+    if elem._config.margin.bottom ~= 0 and elem._config.margin.bottom ~= nil then
         y = (self.screenH - elemSize.height) - elem._config.margin.bottom
     end
     return x, y
