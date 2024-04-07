@@ -1,9 +1,6 @@
 dofile_once("mods/damagelog/files/utils.lua")
 
-local total_damage = 0
-local latest_damage_time = -1
-local latest_damage_frame = -1
-local latest_print_frame = -1
+local damage_data = {  }
 
 --[[
 LUA: !!! damagelog !!! #=0.25, entity=453, proj=0, msg=$damage_melee
@@ -36,16 +33,28 @@ function translate_message(message)
 end
 
 function damage_received( damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
-    current_frame = GameGetFrameNum()
-    latest_damage_frame = current_frame
-    total_damage = total_damage + damage
-    latest_damage_time = GameGetRealWorldTimeSinceStarted()
+    damage = damage * 25 -- TODO: use magic number?
+--    current_frame = GameGetFrameNum()
 
-    if current_frame - latest_print_frame >= 60 then
-    -- TODO!! Always nil-check before GameTextGet, Entity may not return something useful
-      log("#=" .. tostring(damage) .. ", entity=" .. get_entity_name(entity_thats_responsible) .. ", proj=" .. tostring(projectile_thats_responsible) ..  ", msg=" .. translate_message(message))
-      log("TOTAL damage " .. tostring(total_damage) .. ", frame num " .. tostring(latest_damage_frame) .. ", time " .. latest_damage_time)
-      latest_print_frame = latest_damage_frame
-      total_damage = 0
-    end
+--      log("#=" .. tostring(damage) .. ", entity=" .. get_entity_name(entity_thats_responsible) .. ", proj=" .. tostring(projectile_thats_responsible) ..  ", msg=" .. translate_message(message))
+--      log("TOTAL damage " .. tostring(total_damage) .. ", frame num " .. tostring(latest_damage_frame) .. ", time " .. latest_damage_time)
+
+    local hp_after = 0
+
+    log("Inserting " .. tostring(damage) .. " damage at frame " .. tostring(GameGetFrameNum()))
+    table.insert(damage_data, {
+        get_entity_name(entity_thats_responsible), -- TODO: fix the first two columns
+        message,
+        damage,
+        hp_after,
+        GameGetRealWorldTimeSinceStarted()
+    })
+
+      -- TODO: don't save data EVERY frame if we're on fire; pool the data here, not in init.lua
+      -- TODO: sources of every-frame damage include AT LEAST: fire, dragon bit[e?], cursed rock field, possibly piercing
+
+      -- TODO: use a deque here!
+      store_damage_data(damage_data)
 end
+
+return damage_data
