@@ -18,6 +18,60 @@ function log(s)
 	GamePrint("!!! " .. tostring(s))
 end
 
+----- Double ended queue implementation from https://www.lua.org/pil/11.4.html
+List = {}
+function List.new ()
+  return {first = 0, last = -1}
+end
+
+function List.pushleft (list, value)
+  local first = list.first - 1
+  list.first = first
+  list[first] = value
+end
+
+function List.pushright (list, value)
+  local last = list.last + 1
+  list.last = last
+  list[last] = value
+end
+
+function List.popleft (list)
+  local first = list.first
+  if first > list.last then error("list is empty") end
+  local value = list[first]
+  list[first] = nil        -- to allow garbage collection
+  list.first = first + 1
+  return value
+end
+
+function List.popright (list)
+  local last = list.last
+  if list.first > last then error("list is empty") end
+  local value = list[last]
+  list[last] = nil         -- to allow garbage collection
+  list.last = last - 1
+  return value
+end
+
+--- Added by exscape
+function List.isempty (list)
+	return list.first > list.last
+end
+
+--- Added by exscape
+function List.length (list)
+	return list.last - list.first + 1
+end
+
+--- Added by exscape
+function List.peekright (list)
+  local last = list.last
+  if list.first > last then error("list is empty") end
+  return list[last]
+end
+----- End double ended queue implementation
+
 -- The wiki for GlobalsSetValue claims that:
 -- "Writing a string containing quotation marks can corrupt the `world_state.xml` save file."
 -- In case this is still true, let's avoid writing such strings.
@@ -38,7 +92,12 @@ function store_damage_data(data)
 	return #serialized
 end
 
+local empty_list = safe_serialize(List.new())
 function load_damage_data()
-	local data = GlobalsGetValue("damagelog_damage_data", "{}")
+	local data = GlobalsGetValue("damagelog_damage_data", empty_list)
 	return safe_deserialize(data)
 end
+
+-- Bit of a hack, but easy and it works.
+-- Should probably return a table that could hold other exports, too.
+return List

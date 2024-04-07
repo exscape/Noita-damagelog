@@ -51,11 +51,11 @@ function initialize_gui()
 	Gui:AddElement(VLayout)
 
 	local function createRow(row, num)
-		row:AddChild(gusgui.Elements.Text({id = "A" .. tostring(num), text = "A" .. tostring(num), overrideWidth = WIDTH_SOURCE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "B" .. tostring(num), text = "B" .. tostring(num), overrideWidth = WIDTH_TYPE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "C" .. tostring(num), text = "C" .. tostring(num), overrideWidth = WIDTH_DAMAGE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "D" .. tostring(num), text = "D" .. tostring(num), overrideWidth = WIDTH_HP, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "E" .. tostring(num), text = tostring(Random(1, 300)), overrideWidth = WIDTH_TIME, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		row:AddChild(gusgui.Elements.Text({id = "A" .. tostring(num), text = " ", overrideWidth = WIDTH_SOURCE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		row:AddChild(gusgui.Elements.Text({id = "B" .. tostring(num), text = " ", overrideWidth = WIDTH_TYPE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		row:AddChild(gusgui.Elements.Text({id = "C" .. tostring(num), text = " ", overrideWidth = WIDTH_DAMAGE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		row:AddChild(gusgui.Elements.Text({id = "D" .. tostring(num), text = " ", overrideWidth = WIDTH_HP, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		row:AddChild(gusgui.Elements.Text({id = "E" .. tostring(num), text = " ", overrideWidth = WIDTH_TIME, drawBorder = true, padding = PADDING, margin = MARGIN}))
 
 		return row
 	end
@@ -74,6 +74,7 @@ function initialize_gui()
 	for i = 1, 10 do
 		local row = gusgui.Elements.HLayout({
 			margin = 0,
+			hidden = i ~= 10, -- Leave the last (first-used) row visible from the beginning
 			id = "HLayout" .. tostring(i),
 		})
 		VLayout:AddChild(row)
@@ -86,26 +87,26 @@ function update_gui()
 	latest_update_frame = GameGetFrameNum()
 	local damage_data = load_damage_data()
 
-	local damage_count = #damage_data
-	-- log("damage_count in UpdateGUI is " .. tostring(damage_count))
 	for row = 10, 1, -1 do
-		local i = 10 - row + 1
-		if i > damage_count then
+		local iteration = 10 - row + 1 -- starting at 1, as usual in Lua
+		local dmg_index = damage_data["last"] - (10 - row)
+
+		if iteration > List.length(damage_data) then
 			return
 		end
 
 		-- Entity / source
 		-- TODO: limit the length to avoid messy layout from certain enemies
-		rows[row].children[SOURCE].config.text.value = damage_data[damage_count - i + 1][1]
+		rows[row].children[SOURCE].config.text.value = damage_data[dmg_index][1]
 
 		-- Damage type
-		rows[row].children[TYPE].config.text.value = damage_data[damage_count - i + 1][2]
+		rows[row].children[TYPE].config.text.value = damage_data[dmg_index][2]
 
 		-- Damage
-		rows[row].children[DAMAGE].config.text.value = string.format("%.0f", damage_data[damage_count - i + 1][3])
+		rows[row].children[DAMAGE].config.text.value = string.format("%.0f", damage_data[dmg_index][3])
 
 		-- HP after
-		hp_after = damage_data[damage_count - i + 1][4]
+		hp_after = damage_data[dmg_index][4]
 
 		if hp_after >= 1000000 then
 			hp_format = "%.4G"
@@ -121,7 +122,9 @@ function update_gui()
 		rows[row].children[HP].config.text.value = formatted_hp
 
 		-- Time
-		rows[row].children[TIME].config.text.value = format_time(damage_data[damage_count - i + 1][5])
+		rows[row].children[TIME].config.text.value = format_time(damage_data[dmg_index][5])
+
+		rows[row].config.hidden = false
 	end
 end
 
@@ -166,7 +169,8 @@ function OnPlayerSpawned(player_entity)
 
 	-- TODO: remove later if we want this to be stored across sessions.
 	-- Cleared for now to prevent serialization bugs to carry over between restarts.
-	GlobalsSetValue("damagelog_damage_data", "{}")
+	local empty_list = safe_serialize(List.new())
+	GlobalsSetValue("damagelog_damage_data", empty_list)
 
 	initialize_gui()
 

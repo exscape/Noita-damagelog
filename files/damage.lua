@@ -1,14 +1,24 @@
-dofile_once("mods/damagelog/files/utils.lua")
+List = dofile_once("mods/damagelog/files/utils.lua")
 
-local damage_data = {  }
+local damage_data = List.new()
 
 function get_entity_name(entity_id)
-    local entity_name = EntityGetName(entity_id)
-    if entity_name == nil or #entity_name <= 0 then
+    if entity_id == 0 then
         return "Unknown"
     end
 
-    if entity_name == "DEBUG_NAME:player" then
+    local entity_name = EntityGetName(entity_id)
+    if entity_name == nil or #entity_name <= 0 then
+        -- Unfortunately happens for some entities, like animals/rainforest/bloom.xml, that use a base entity
+        --[[
+        local file = EntityGetFilename(entity_id)
+        log("Entity filename: " .. file)
+        local data = ModTextFileGetContent(file)
+        log("READ FROM XML: " .. tostring(data))
+        ]]
+
+        return "TODO: XML PARSE"
+    elseif entity_name == "DEBUG_NAME:player" then
         return "Player"
     end
 
@@ -79,6 +89,31 @@ function get_player_health()
 	return health
 end
 
+function should_pool_damage(source, message)
+    -- TODO: expand with other sources
+    if (source ~= "Fire" and source ~= "Toxic sludge") or List.isempty(damage_data) then
+        return false
+    end
+
+    local prev = List.peekright(damage_data)
+
+    if prev[1] ~= source then
+        return false
+    end
+
+    -- Only one check remaining: whether the previous damage was recent enough.
+    -- For fire (and some other effects like cursed area damage), recent enough means within a couple of frames.
+    -- For toxic sludge, poison and perhaps others, use a bit longer, since they only seem to fire about (exactly)?
+    -- once a second.
+    -- Fire uses more than 1-2 frames on purpose, so that if you're constantly getting set on fire and having it
+    -- put out, we don't spam the log.
+    local frame_diff = GameGetFrameNum() - prev[6]
+
+    if source == "Fire" then return frame_diff < 30
+    else return frame_diff < 120
+    end
+end
+
 -- Called by Noita every time the player takes damage
 -- Hook is initialized in init.lua
 function damage_received( damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
@@ -107,19 +142,32 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
     local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
     if hp_after < 0 then hp_after = 0 end
 
-    table.insert(damage_data, {
+    -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
+    -- if the last damage entry was from the same source *AND* it was recent.
+    if should_pool_damage(source, message) then
+        local prev = List.popright(damage_data)
+        damage = damage + prev[3]
+    end
+
+    List.pushright(damage_data, {
         source,
         damage_type,
         damage,
         hp_after,
-        GameGetRealWorldTimeSinceStarted()
+        GameGetRealWorldTimeSinceStarted(),
+        GameGetFrameNum()
     })
 
+    while damage_data.last - damage_data.first >= 10 do
+        -- Limit the list to 10 entries.
+        -- Should never need to run more than once, but why shouldn't I use a loop...?
+        List.popleft(damage_data)
+    end
+
+    len = store_damage_data(damage_data)
     -- TODO: don't save data EVERY frame if we're on fire; pool the data here, not in init.lua
     -- TODO: sources of every-frame damage include AT LEAST: fire, dragon bit[e?], cursed rock field, possibly piercing
     -- TODO: use a deque here!
-      local data_points = #damage_data
-      local serialized_length = store_damage_data(damage_data)
 
       -- TODO: data_points shouldn't surpass something like 50-60 if we add scrolling, or 10 if we don't!
       -- TODO: serialized_length must not surpass 10000, start cutting down if we reach say 8000
