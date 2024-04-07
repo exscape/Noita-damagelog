@@ -38,6 +38,8 @@ function store_damage_data(data)
 --	log("STORING DATA: " .. serialized)
 	GlobalsSetValue("damagelog_damage_data", serialized)
 	GlobalsSetValue("damagelog_latest_data_frame", GameGetFrameNum())
+
+	return #serialized
 end
 
 function load_damage_data()

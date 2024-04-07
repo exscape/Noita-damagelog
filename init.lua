@@ -92,14 +92,15 @@ function UpdateGUI()
 	local damage_data = load_damage_data()
 
 	local damage_count = #damage_data
+	-- log("damage_count in UpdateGUI is " .. tostring(damage_count))
 	for row=10,1,-1 do
 		local i = 10 - row + 1
 		if i > damage_count then
-			log("exiting loop, i > damage_count: " .. tostring(i) .. " > " .. tostring(damage_count))
+--			log("exiting loop, i > damage_count: " .. tostring(i) .. " > " .. tostring(damage_count))
 			return
 		end
 
-		log("damage_count=" .. tostring(damage_count) .. ", row=" .. tostring(row) .. ", i=" .. tostring(i) .. ", accessing damage_data[" .. tostring(damage_count - i + 1) .. "]")
+	--	log("damage_count=" .. tostring(damage_count) .. ", row=" .. tostring(row) .. ", i=" .. tostring(i) .. ", accessing damage_data[" .. tostring(damage_count - i + 1) .. "]")
 
 		-- Entity / source
 		rows[row].children[1].config.text.value = damage_data[damage_count - i + 1][1]
