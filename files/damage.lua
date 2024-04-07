@@ -30,11 +30,13 @@ function translate_message(message)
     end
 end
 
--- Most of these will probably never trigger as the entity will be displayed instead of the damage type, but
--- I'd rather have "Source: drill" shown than "Unknown" just in case.
-local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1, drill = 1, slice = 1, ice = 1,
-                healing = 1, poison = 1, water = 1, drowning = 1, kick = 1, fall = 1 }
 function lookup_damage_type(type)
+    -- Most of these will probably never trigger as the entity will be displayed instead of
+    -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
+    local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
+                           drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
+                           drowning = 1, kick = 1, fall = 1 }
+
     local source
     if simple_types[type] then
         source = (type:gsub("^%l", string.upper)) -- Uppercased first letter
@@ -96,7 +98,7 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
     elseif damage_was_from_material then
         source = (message:gsub("^%l", string.upper))
     else
-        -- Should never happen, displayed for debugging purposes so that the mod can be updated
+        -- Should never happen; displayed for debugging purposes so that the mod can be updated
         source = "MSG: " .. message
         log("damagelog WARNING: unknown message: " .. tostring(message))
     end
@@ -105,7 +107,6 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
     local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
     if hp_after < 0 then hp_after = 0 end
 
---    log("Inserting " .. tostring(damage) .. " damage at frame " .. tostring(GameGetFrameNum()))
     table.insert(damage_data, {
         source,
         damage_type,

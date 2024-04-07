@@ -1,7 +1,5 @@
 smallfolk = dofile_once("mods/damagelog/smallfolk/smallfolk.lua")
 
-local test_shared = {}
-
 function dump(o)
 	if type(o) == 'table' then
 	   local s = '{ '
@@ -25,7 +23,6 @@ end
 -- In case this is still true, let's avoid writing such strings.
 function safe_serialize(s)
 	local serialized = smallfolk.dumps(s)
---	log("safe_serialize BEFORE gsub, original data is: " .. serialized)
 	return (serialized:gsub([["]], [[!]]))
 end
 
@@ -35,7 +32,6 @@ end
 
 function store_damage_data(data)
 	local serialized = safe_serialize(data)
---	log("STORING DATA: " .. serialized)
 	GlobalsSetValue("damagelog_damage_data", serialized)
 	GlobalsSetValue("damagelog_latest_data_frame", GameGetFrameNum())
 
@@ -44,8 +40,5 @@ end
 
 function load_damage_data()
 	local data = GlobalsGetValue("damagelog_damage_data", "{}")
---	log("DATA STORED in globals IS: " .. data)
 	return safe_deserialize(data)
 end
-
-return test_shared
