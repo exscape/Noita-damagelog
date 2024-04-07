@@ -5,13 +5,13 @@ local Gui = nil
 
 local display_gui = true
 
-local WIDTH_SOURCE = 75
+local WIDTH_SOURCE = 70
 local WIDTH_TYPE = 60
-local WIDTH_DAMAGE = 30
-local WIDTH_HP = 30
-local WIDTH_TIME = 45
-local WIDTH_TABLE = WIDTH_SOURCE + WIDTH_TYPE + WIDTH_DAMAGE + WIDTH_HP + WIDTH_TIME
-local PADDING = { left = 3, right = 3, top = 1, bottom = 1}
+local WIDTH_DAMAGE = 35
+local WIDTH_HP = 40
+local WIDTH_TIME = 40
+local PADDING = { left = 3, right = 3, top = 2, bottom = 2}
+local MARGIN = 0
 
 -- Indices for rows[x].children for each column
 local SOURCE = 1
@@ -51,11 +51,11 @@ function CreateGUI()
 	Gui:AddElement(VLayout)
 
 	local function createRow(HLayout, num)
-		HLayout:AddChild(gusgui.Elements.Text({id = "A" .. tostring(num), text = "A" .. tostring(num), overrideWidth = WIDTH_SOURCE, drawBorder = true, padding = PADDING}))
-		HLayout:AddChild(gusgui.Elements.Text({id = "B" .. tostring(num), text = "B" .. tostring(num), overrideWidth = WIDTH_TYPE, drawBorder = true, padding = PADDING}))
-		HLayout:AddChild(gusgui.Elements.Text({id = "C" .. tostring(num), text = "C" .. tostring(num), overrideWidth = WIDTH_DAMAGE, drawBorder = true, padding = PADDING}))
-		HLayout:AddChild(gusgui.Elements.Text({id = "D" .. tostring(num), text = "D" .. tostring(num), overrideWidth = WIDTH_HP, drawBorder = true, padding = PADDING}))
-		HLayout:AddChild(gusgui.Elements.Text({id = "E" .. tostring(num), text = tostring(Random(1, 300)), overrideWidth = WIDTH_TIME, drawBorder = true, padding = PADDING}))
+		HLayout:AddChild(gusgui.Elements.Text({id = "A" .. tostring(num), text = "A" .. tostring(num), overrideWidth = WIDTH_SOURCE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		HLayout:AddChild(gusgui.Elements.Text({id = "B" .. tostring(num), text = "B" .. tostring(num), overrideWidth = WIDTH_TYPE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		HLayout:AddChild(gusgui.Elements.Text({id = "C" .. tostring(num), text = "C" .. tostring(num), overrideWidth = WIDTH_DAMAGE, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		HLayout:AddChild(gusgui.Elements.Text({id = "D" .. tostring(num), text = "D" .. tostring(num), overrideWidth = WIDTH_HP, drawBorder = true, padding = PADDING, margin = MARGIN}))
+		HLayout:AddChild(gusgui.Elements.Text({id = "E" .. tostring(num), text = tostring(Random(1, 300)), overrideWidth = WIDTH_TIME, drawBorder = true, padding = PADDING, margin = MARGIN}))
 
 		return HLayout
 	end
@@ -65,11 +65,11 @@ function CreateGUI()
 		id = "headerHLayout",
 	})
 	VLayout:AddChild(header)
-	header:AddChild(gusgui.Elements.Text({id = "HeaderA" .. tostring(num), text = "Source", overrideWidth = WIDTH_SOURCE, drawBorder = true, drawBackground = true, padding = PADDING}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderB" .. tostring(num), text = "Type", overrideWidth = WIDTH_TYPE, drawBorder = true, drawBackground = true, padding = PADDING}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderC" .. tostring(num), text = "Damage", overrideWidth = WIDTH_DAMAGE, drawBorder = true, drawBackground = true, padding = PADDING}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderD" .. tostring(num), text = "HP", overrideWidth = WIDTH_HP, drawBorder = true, drawBackground = true, padding = PADDING}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderE" .. tostring(num), text = "Time", overrideWidth = WIDTH_TIME, drawBorder = true, drawBackground = true, padding = PADDING}))
+	header:AddChild(gusgui.Elements.Text({id = "HeaderA" .. tostring(num), text = "Source", overrideWidth = WIDTH_SOURCE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
+	header:AddChild(gusgui.Elements.Text({id = "HeaderB" .. tostring(num), text = "Type", overrideWidth = WIDTH_TYPE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
+	header:AddChild(gusgui.Elements.Text({id = "HeaderC" .. tostring(num), text = "Damage", overrideWidth = WIDTH_DAMAGE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
+	header:AddChild(gusgui.Elements.Text({id = "HeaderD" .. tostring(num), text = "HP", overrideWidth = WIDTH_HP, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
+	header:AddChild(gusgui.Elements.Text({id = "HeaderE" .. tostring(num), text = "Time", overrideWidth = WIDTH_TIME, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
 
 	for i = 1, 10 do
 		local HLayout = gusgui.Elements.HLayout({
@@ -87,8 +87,6 @@ end
 
 function UpdateGUI()
 	latest_update_frame = GameGetFrameNum()
---	log("Would update GUI at frame " .. tostring(latest_update_frame))
-
 	local damage_data = load_damage_data()
 
 	local damage_count = #damage_data
@@ -103,19 +101,32 @@ function UpdateGUI()
 	--	log("damage_count=" .. tostring(damage_count) .. ", row=" .. tostring(row) .. ", i=" .. tostring(i) .. ", accessing damage_data[" .. tostring(damage_count - i + 1) .. "]")
 
 		-- Entity / source
-		rows[row].children[1].config.text.value = damage_data[damage_count - i + 1][1]
+		rows[row].children[SOURCE].config.text.value = damage_data[damage_count - i + 1][1]
 
-		-- Message
-		rows[row].children[2].config.text.value = damage_data[damage_count - i + 1][2]
+		-- Damage type
+		rows[row].children[TYPE].config.text.value = damage_data[damage_count - i + 1][2]
 
 		-- Damage
-		rows[row].children[3].config.text.value = string.format("%.2f", damage_data[damage_count - i + 1][3])
+		rows[row].children[DAMAGE].config.text.value = string.format("%.0f", damage_data[damage_count - i + 1][3])
 
 		-- HP after
-		rows[row].children[4].config.text.value = damage_data[damage_count - i + 1][4]
+		hp_after = damage_data[damage_count - i + 1][4]
+
+		if hp_after >= 1000000 then
+			hp_format = "%.4G"
+		else
+			hp_format = "%.0f"
+		end
+		-- Convert e.g. 1.3E+007 to 1.3E7
+		formatted_hp = (string.format(hp_format, hp_after):gsub("E%+0*", "E"))
+
+		if formatted_hp == "0"
+			formatted_hp = "1"
+		end
+		rows[row].children[HP].config.text.value = formatted_hp
 
 		-- Time
-		rows[row].children[5].config.text.value = FormatTimeAgo(damage_data[damage_count - i + 1][5])
+		rows[row].children[TIME].config.text.value = FormatTimeAgo(damage_data[damage_count - i + 1][5])
 	end
 end
 

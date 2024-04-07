@@ -5,7 +5,7 @@ local damage_data = {  }
 function get_entity_name(entity_id)
     local entity_name = EntityGetName(entity_id)
     if entity_name == nil or #entity_name <= 0 then
-        return "ID: " .. tostring(entity_id)
+        return "Unknown"
     end
 
     if entity_name == "DEBUG_NAME:player" then
@@ -32,9 +32,9 @@ end
 
 -- Most of these will probably never trigger as the entity will be displayed instead of the damage type, but
 -- I'd rather have "Source: drill" shown than "Unknown" just in case.
-simple_types = {projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1, drill = 1, slice = 1, ice = 1,
+local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1, drill = 1, slice = 1, ice = 1,
                 healing = 1, poison = 1, water = 1, drowning = 1, kick = 1, fall = 1 }
-function LookupDamageType(type)
+function lookup_damage_type(type)
     local source
     if simple_types[type] then
         source = (type:gsub("^%l", string.upper)) -- Uppercased first letter
@@ -51,23 +51,48 @@ function LookupDamageType(type)
     return source
 end
 
+function get_player_entity()
+	local players = EntityGetWithTag("player_unit")
+	if #players == 0 then
+        return nil
+    end
+
+	return players[1]
+end
+
+function get_player_health()
+    local player = get_player_entity()
+    if player == nil then
+        return 0
+    end
+
+	local damagemodels = EntityGetComponent( get_player_entity(), "DamageModelComponent" )
+	local health = 0
+	if damagemodels ~= nil then
+		for _,v in ipairs(damagemodels) do
+			health = tonumber( ComponentGetValue( v, "hp" ) )
+			break
+		end
+	end
+	return health
+end
+
+-- Called by Noita every time the player takes damage
+-- Hook is initialized in init.lua
 function damage_received( damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
-    damage = damage * 25 -- TODO: use magic number?
---    current_frame = GameGetFrameNum()
+    damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
 
---      log("#=" .. tostring(damage) .. ", entity=" .. get_entity_name(entity_thats_responsible) .. ", proj=" .. tostring(projectile_thats_responsible) ..  ", msg=" .. translate_message(message))
---      log("TOTAL damage " .. tostring(total_damage) .. ", frame num " .. tostring(latest_damage_frame) .. ", time " .. latest_damage_time)
-
-    local source = "-"
     local damage_was_from_material = message:find("damage from material: ")
     message = (message:gsub("damage from material: ", ""))
+
+    local source
     if entity_thats_responsible ~= 0 then
         -- Show the responsible entity if one exists
         source = get_entity_name(entity_thats_responsible)
     elseif message:sub(1,8) == "$damage_" then
-        -- No responsible entity; damage is something like toxic sludge stain, fire etc.
+        -- No responsible entity; damage is something like toxic sludge, fire etc.
         -- Show that as the source.
-        source = LookupDamageType(message:sub(9, #message))
+        source = lookup_damage_type(message:sub(9, #message))
     elseif damage_was_from_material then
         source = (message:gsub("^%l", string.upper))
     else
@@ -77,8 +102,8 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
     end
 
     local damage_type = message
-
-    local hp_after = 0
+    local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
+    if hp_after < 0 then hp_after = 0 end
 
 --    log("Inserting " .. tostring(damage) .. " damage at frame " .. tostring(GameGetFrameNum()))
     table.insert(damage_data, {
