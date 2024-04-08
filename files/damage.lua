@@ -96,13 +96,18 @@ end
 
 function should_pool_damage(source, message)
     -- TODO: expand with other sources
-    if (source ~= "Fire" and source ~= "Toxic sludge") or List.isempty(damage_data) then
+    local sources_to_pool = {
+        Fire = 1, Acid = 1, Poison = 1, Drowning = 1,
+        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1
+    }
+
+    if not sources_to_pool[source] or List.isempty(damage_data) then
         return false
     end
 
     local prev = List.peekright(damage_data)
 
-    if prev[1] ~= source then
+    if prev[1] ~= source or prev[2] ~= message then
         return false
     end
 
@@ -114,8 +119,10 @@ function should_pool_damage(source, message)
     -- put out, we don't spam the log.
     local frame_diff = GameGetFrameNum() - prev[6]
 
-    if source == "Fire" then return frame_diff < 30
-    else return frame_diff < 120
+    if source == "Fire" then
+        return frame_diff < 30
+    else
+        return frame_diff < 120
     end
 end
 
