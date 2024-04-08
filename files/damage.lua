@@ -177,10 +177,10 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
     end
 
     len = store_damage_data(damage_data)
-    -- TODO: don't save data EVERY frame if we're on fire; pool the data here, not in init.lua
-    -- TODO: sources of every-frame damage include AT LEAST: fire, dragon bit[e?], cursed rock field, possibly piercing
-    -- TODO: use a deque here!
 
-      -- TODO: data_points shouldn't surpass something like 50-60 if we add scrolling, or 10 if we don't!
-      -- TODO: serialized_length must not surpass 10000, start cutting down if we reach say 8000
+    --- TODO: remove this once it's clear it doesn't trigger -- though it should be OK regardless,
+    --- TODO: there doesn't seem to be any measureable performance loss
+    if len > 2000 then
+        log("!!! damage data is larger than expected maximum; serialized length is " .. tostring(len) .. " bytes")
+    end
 end
