@@ -1,0 +1,6 @@
+<Mod
+	name="Damage Log Development Helper"
+	description="Creates a map of entity filenames to entity names to work around an EntityGetName bug"
+	request_no_api_restrictions="1"
+> 
+</Mod>
