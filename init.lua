@@ -93,7 +93,12 @@ function draw_gui()
 			imgui.Text(gui_data[data_index][TYPE])
 
 			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index][DAMAGE])
+			local is_healing, damage = unpack(gui_data[data_index][DAMAGE])
+			if is_healing then
+				imgui.TextColored(0.3, 1.0, 0.3, 1.0, damage)
+			else
+				imgui.Text(damage)
+			end
 
 			imgui.TableNextColumn()
 			imgui.Text(gui_data[data_index][HP])
@@ -131,7 +136,7 @@ function update_gui_data()
 		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
 		gui_data[row][SOURCE] = source
 		gui_data[row][TYPE] = type
-		gui_data[row][DAMAGE] = string.format("%.0f", d[3])
+		gui_data[row][DAMAGE] = { d[3] < 0, string.format("%.0f", d[3]) }
 		gui_data[row][HP] = format_hp(d[4])
 		gui_data[row][TIME] = format_time(d[5])
 		gui_data[row][HIDDEN] = false
