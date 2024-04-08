@@ -1,26 +1,34 @@
 dofile_once("mods/damagelog/files/utils.lua")
 dofile_once("mods/damagelog/files/damage.lua")
-local gusgui = dofile_once("mods/damagelog/gusgui/Gui.lua").gusgui()
-local Gui = nil
 
 local display_gui = true
 
+-- NOTE: also needs to be changed in damage.lua.
+-- Might be changed to a proper setting soon. As of this writing the new UI is not even implemented.
+local num_rows = 10
+
+-- TODO: remove unless used in ImGui too
 local WIDTH_SOURCE = 80
 local WIDTH_TYPE = 60
 local WIDTH_DAMAGE = 35
 local WIDTH_HP = 40
 local WIDTH_TIME = 40
-local PADDING = { left = 3, right = 3, top = 2, bottom = 2}
-local MARGIN = 0
 
--- Indices for rows[x].children for each column
+-- A copy of the data from damage.lua, untouched
+local raw_damage_data = {}
+
+-- The processed version of the damage data, i.e. formatted strings for the GUI
+-- Uses the indices below.
+local gui_data = {}
+
+-- Indices for gui_data
 local SOURCE = 1
 local TYPE = 2
 local DAMAGE = 3
 local HP = 4
 local TIME = 5
+local HIDDEN = 6
 
-local rows = {}
 local latest_update_frame = -1
 
 function format_time(time)
@@ -38,12 +46,26 @@ function format_time(time)
 	end
 end
 
-function initialize_gui()
-	if Gui ~= nil then
-		Gui:Destroy()
+ function format_hp(hp)
+	if hp >= 1000000 then
+		hp_format = "%.4G"
+	else
+		hp_format = "%.0f"
 	end
 
-	Gui = gusgui.Create()
+	-- Convert e.g. 1.3E+007 to 1.3E7
+	formatted_hp = (string.format(hp_format, hp):gsub("E%+0*", "E"))
+
+	-- Prevent string.format from rounding to 0, no matter how close it is
+	if formatted_hp == "0" and hp ~= 0 then
+		formatted_hp = "<1"
+	end
+
+	return formatted_hp
+end
+
+function draw_gui()
+	--[[
 	local VLayout = gusgui.Elements.VLayout({
 		margin = {top = 47, left = 20, right = 0, bottom = 0},
 		id = "table",
@@ -81,70 +103,60 @@ function initialize_gui()
 		table.insert(rows, row)
 		createRow(row, i)
 	end
+	--]]
 end
 
-function update_gui()
+--- Convert the damage data to what we want to display.
+--- This is not done every frame for performance reasons, but rather when the data has changed.
+--- If e.g. on fire it WILL currently update every frame, however, since the damage data changes every frame.
+function update_gui_data()
 	latest_update_frame = GameGetFrameNum()
-	local damage_data = load_damage_data()
+	raw_damage_data = load_damage_data()
 
-	for row = 10, 1, -1 do
-		local iteration = 10 - row + 1 -- starting at 1, as usual in Lua
-		local dmg_index = damage_data["last"] - (10 - row)
+	for row = num_rows, 1, -1 do
+		local iteration = num_rows - row + 1 -- starting at 1, as usual in Lua
 
-		if iteration > List.length(damage_data) then
+		if iteration > List.length(raw_damage_data) then
 			return
 		end
 
-		-- Entity / source
-		-- TODO: limit the length to avoid messy layout from certain enemies
-		rows[row].children[SOURCE].config.text.value = damage_data[dmg_index][1]
+		local dmg_index = raw_damage_data["last"] - (num_rows - row)
+		local d = raw_damage_data[dmg_index]
 
-		-- Damage type
-		rows[row].children[TYPE].config.text.value = damage_data[dmg_index][2]
+		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
+		gui_data[row][SOURCE] = d[1]
+		gui_data[row][TYPE] = d[2]
+		gui_data[row][DAMAGE] = string.format("%.0f", d[3])
+		gui_data[row][HP] = format_hp(d[4])
+		gui_data[row][TIME] = format_time(d[5])
+		gui_data[row][HIDDEN] = false
+	end
+end
 
-		-- Damage
-		rows[row].children[DAMAGE].config.text.value = string.format("%.0f", damage_data[dmg_index][3])
-
-		-- HP after
-		hp_after = damage_data[dmg_index][4]
-
-		if hp_after >= 1000000 then
-			hp_format = "%.4G"
-		else
-			hp_format = "%.0f"
-		end
-		-- Convert e.g. 1.3E+007 to 1.3E7
-		formatted_hp = (string.format(hp_format, hp_after):gsub("E%+0*", "E"))
-
-		if formatted_hp == "0" then
-			formatted_hp = "1"
-		end
-		rows[row].children[HP].config.text.value = formatted_hp
-
-		-- Time
-		rows[row].children[TIME].config.text.value = format_time(damage_data[dmg_index][5])
-
-		rows[row].config.hidden = false
+function OnModPreInit()
+	for i = 1, num_rows do
+		gui_data[i] = {}
+		gui_data[i][HIDDEN] = true
 	end
 end
 
 function OnWorldPostUpdate()
-	-- TODO: This only works in beta! No similar methods appear to exist outside of beta as of 2024-04-06
-	-- Left Control + E
+	-- NOTE: This requires Noita beta OR a newer build.
+	-- As of this writing (2024-04-08) the main branch was updated to have these methods *today*.
+	-- Default keys are Left Control + E
 	if InputIsKeyDown(224) and InputIsKeyJustDown(8) then
 		display_gui = not display_gui
 	end
 
-	if Gui == nil or not display_gui then
+	if not display_gui then
 		return
 	end
 
+	-- Recalculate at least once a second, since we need to update the time column
 	local latest_data_frame = tonumber(GlobalsGetValue("damagelog_latest_data_frame", "0"))
 	if (latest_data_frame >= latest_update_frame) or ((GameGetFrameNum() - latest_update_frame) % 60 == 0) then
-		update_gui()
+		update_gui_data()
 	end
-
-	Gui:Render()
 end
 
 -- Called by Noita when the player spawns. Must have this name.
