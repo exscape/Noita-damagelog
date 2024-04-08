@@ -140,7 +140,7 @@ function OnWorldPostUpdate()
 	end
 
 	local latest_data_frame = tonumber(GlobalsGetValue("damagelog_latest_data_frame", "0"))
-	if (latest_data_frame >= latest_update_frame) or (GameGetFrameNum() % 60 == 0) then
+	if (latest_data_frame >= latest_update_frame) or ((GameGetFrameNum() - latest_update_frame) % 60 == 0) then
 		update_gui()
 	end
 
