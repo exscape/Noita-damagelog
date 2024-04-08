@@ -100,7 +100,7 @@ end
 function should_pool_damage(source, message)
     -- TODO: expand with other sources
     local sources_to_pool = {
-        Fire = 1, Acid = 1, Poison = 1, Drowning = 1,
+        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
         ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1
     }
 

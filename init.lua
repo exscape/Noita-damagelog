@@ -1,21 +1,14 @@
 dofile_once("mods/damagelog/files/utils.lua")
 dofile_once("mods/damagelog/files/damage.lua")
 
-local display_gui = true
+local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
 -- NOTE: also needs to be changed in damage.lua.
 -- Might be changed to a proper setting soon. As of this writing the new UI is not even implemented.
 local num_rows = 10
 
--- TODO: remove unless used in ImGui too
-local WIDTH_SOURCE = 80
-local WIDTH_TYPE = 60
-local WIDTH_DAMAGE = 35
-local WIDTH_HP = 40
-local WIDTH_TIME = 40
-
 -- A copy of the data from damage.lua, untouched
-local raw_damage_data = {}
+local raw_damage_data = List.new()
 
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 -- Uses the indices below.
@@ -30,6 +23,7 @@ local TIME = 5
 local HIDDEN = 6
 
 local latest_update_frame = -1
+local display_gui = true
 
 function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
@@ -53,57 +47,63 @@ end
 		hp_format = "%.0f"
 	end
 
-	-- Convert e.g. 1.3E+007 to 1.3E7
+	-- Format, and convert e.g. 1.3E+007 to 1.3E7
 	formatted_hp = (string.format(hp_format, hp):gsub("E%+0*", "E"))
 
-	-- Prevent string.format from rounding to 0, no matter how close it is
-	if formatted_hp == "0" and hp ~= 0 then
-		formatted_hp = "<1"
+	-- Prevent string.format from rounding to 0... in most cases
+	if formatted_hp == "0" and hp > 0 then
+		formatted_hp = string.format("%.03f", hp)
 	end
 
 	return formatted_hp
 end
 
 function draw_gui()
-	--[[
-	local VLayout = gusgui.Elements.VLayout({
-		margin = {top = 47, left = 20, right = 0, bottom = 0},
-		id = "table",
-	})
-	Gui:AddElement(VLayout)
+	if not imgui then return end
 
-	local function createRow(row, num)
-		row:AddChild(gusgui.Elements.Text({id = "A" .. tostring(num), text = " ", overrideWidth = WIDTH_SOURCE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "B" .. tostring(num), text = " ", overrideWidth = WIDTH_TYPE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "C" .. tostring(num), text = " ", overrideWidth = WIDTH_DAMAGE, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "D" .. tostring(num), text = " ", overrideWidth = WIDTH_HP, drawBorder = true, padding = PADDING, margin = MARGIN}))
-		row:AddChild(gusgui.Elements.Text({id = "E" .. tostring(num), text = " ", overrideWidth = WIDTH_TIME, drawBorder = true, padding = PADDING, margin = MARGIN}))
+	imgui.SetNextWindowPos(40, 85, imgui.Cond.Once)
+--    imgui.SetNextWindowSize(800, 400, imgui.Cond.Once)
+    if imgui.Begin("Damage log", true, imgui.WindowFlags.AlwaysAutoResize) then
+		imgui.BeginTable("Damage", 5, imgui.TableFlags.Borders)
 
-		return row
-	end
+		-- Draw the header
+		imgui.TableNextRow(imgui.TableRowFlags.Headers)
+		imgui.TableNextColumn()
+		imgui.Text("Source")
+		imgui.TableNextColumn()
+		imgui.Text("Type")
+		imgui.TableNextColumn()
+		imgui.Text("Damage")
+		imgui.TableNextColumn()
+		imgui.Text("HP")
+		imgui.TableNextColumn()
+		imgui.Text("Time")
 
-	local header = gusgui.Elements.HLayout({
-		margin = 0,
-		id = "headerHLayout",
-	})
-	VLayout:AddChild(header)
-	header:AddChild(gusgui.Elements.Text({id = "HeaderA" .. tostring(num), text = "Source", overrideWidth = WIDTH_SOURCE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderB" .. tostring(num), text = "Type", overrideWidth = WIDTH_TYPE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderC" .. tostring(num), text = "Damage", overrideWidth = WIDTH_DAMAGE, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderD" .. tostring(num), text = "HP", overrideWidth = WIDTH_HP, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
-	header:AddChild(gusgui.Elements.Text({id = "HeaderE" .. tostring(num), text = "Time", overrideWidth = WIDTH_TIME, drawBorder = true, drawBackground = true, padding = PADDING, margin = MARGIN}))
+		for row = 1, math.min(num_rows, List.length(raw_damage_data)) do
+			-- The data is stored such that the most recent data is at index 10,
+			-- but we need to draw it from the top. However, if there is less than
+			-- num_rows (usually 10) hits, indices below 10 may be nil.
+			local data_index = row + (num_rows - List.length(raw_damage_data))
+			imgui.TableNextRow()
 
-	for i = 1, 10 do
-		local row = gusgui.Elements.HLayout({
-			margin = 0,
-			hidden = i ~= 10, -- Leave the last (first-used) row visible from the beginning
-			id = "HLayout" .. tostring(i),
-		})
-		VLayout:AddChild(row)
-		table.insert(rows, row)
-		createRow(row, i)
-	end
-	--]]
+			imgui.TableNextColumn()
+			imgui.Text(gui_data[data_index][SOURCE])
+
+			imgui.TableNextColumn()
+			imgui.Text(gui_data[data_index][TYPE])
+
+			imgui.TableNextColumn()
+			imgui.Text(gui_data[data_index][DAMAGE])
+
+			imgui.TableNextColumn()
+			imgui.Text(gui_data[data_index][HP])
+
+			imgui.TableNextColumn()
+			imgui.Text(gui_data[data_index][TIME])
+		end
+		imgui.EndTable()
+        imgui.End() -- Damage log window
+    end
 end
 
 --- Convert the damage data to what we want to display.
@@ -123,9 +123,14 @@ function update_gui_data()
 		local dmg_index = raw_damage_data["last"] - (num_rows - row)
 		local d = raw_damage_data[dmg_index]
 
+		local source = d[1]
+		local type = d[2]
+		if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
+		if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+
 		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
-		gui_data[row][SOURCE] = d[1]
-		gui_data[row][TYPE] = d[2]
+		gui_data[row][SOURCE] = source
+		gui_data[row][TYPE] = type
 		gui_data[row][DAMAGE] = string.format("%.0f", d[3])
 		gui_data[row][HP] = format_hp(d[4])
 		gui_data[row][TIME] = format_time(d[5])
@@ -140,7 +145,17 @@ function OnModPreInit()
 	end
 end
 
+local last_warning_time = -3
 function OnWorldPostUpdate()
+	if not imgui then
+		-- Not sure how else to handle this. Spam warnings often if imgui is not available, since the mod will be useless.
+		local current_time = GameGetRealWorldTimeSinceStarted()
+		if current_time - last_warning_time > 5 then
+			GamePrint("damagelog: ImGui not available! Ensure NoitaDearImGui mod is installed, active, and ABOVE this mod in the mod list!")
+			last_warning_time = current_time
+		end
+	end
+
 	-- NOTE: This requires Noita beta OR a newer build.
 	-- As of this writing (2024-04-08) the main branch was updated to have these methods *today*.
 	-- Default keys are Left Control + E
@@ -154,9 +169,11 @@ function OnWorldPostUpdate()
 
 	-- Recalculate at least once a second, since we need to update the time column
 	local latest_data_frame = tonumber(GlobalsGetValue("damagelog_latest_data_frame", "0"))
-	if (latest_data_frame >= latest_update_frame) or ((GameGetFrameNum() - latest_update_frame) % 60 == 0) then
+	if latest_data_frame > latest_update_frame or (GameGetFrameNum() - latest_update_frame) >= 60 then
 		update_gui_data()
 	end
+
+	draw_gui()
 end
 
 -- Called by Noita when the player spawns. Must have this name.
@@ -181,11 +198,6 @@ function OnPlayerSpawned(player_entity)
 
 	-- TODO: remove later if we want this to be stored across sessions.
 	-- Cleared for now to prevent serialization bugs to carry over between restarts.
-	local empty_list = safe_serialize(List.new())
-	GlobalsSetValue("damagelog_damage_data", empty_list)
-
-	initialize_gui()
-
-
-
+--	local empty_list = safe_serialize(List.new())
+--	GlobalsSetValue("damagelog_damage_data", empty_list)
 end
