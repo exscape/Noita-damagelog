@@ -26,8 +26,16 @@ function get_entity_name(entity_id)
         else
             return "Unknown"
         end
+    -- Handle a few special cases
     elseif entity_name == "DEBUG_NAME:player" then
         return "Player"
+    elseif entity_name == "workshop_altar" then
+        return "Holy mountain"
+    elseif entity_name:sub(1, 1) ~= '$' then
+        -- Ugly, but at least it will show up.
+        -- Not sure where this happens, but it happened for DEBUG_NAME:player and workshop_altar
+        -- prior to handling them as special cases above.
+        return entity_name
     end
 
     local translated = GameTextGet(entity_name)
@@ -62,8 +70,6 @@ function lookup_damage_type(type)
         source = "Toxic sludge"
     elseif type == "physicshit" then
         source = "Physics"
-    elseif type == "holy_mountains_curse" then
-        source = "Holy mountain curse"
     else
         source = "TYPE: " .. type
     end
@@ -101,7 +107,8 @@ function should_pool_damage(source, message)
     -- TODO: expand with other sources
     local sources_to_pool = {
         Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
-        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1
+        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
+        ["Holy mountain"] = 1
     }
 
     if not sources_to_pool[source] or List.isempty(damage_data) then
@@ -182,7 +189,7 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
 
     --- TODO: remove this once it's clear it doesn't trigger -- though it should be OK regardless,
     --- TODO: there doesn't seem to be any measureable performance loss
-    if len > 1500 * num_rows then
+    if len > 150 * num_rows then
         log("!!! damage data is larger than expected maximum; serialized length is " .. tostring(len) .. " bytes")
     end
 end
