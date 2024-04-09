@@ -57,100 +57,110 @@ end
 	return formatted_hp
 end
 
+local collapsed = false
+
 function draw_gui()
 	if not imgui then return end
 
-	-- TODO: enable the close button
-	 local window_flags = imgui.WindowFlags.AlwaysAutoResize
-	imgui.SetNextWindowPos(40, 85, imgui.Cond.Once)
-	window_status_changed, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
+
+	if not display_gui then
+		return
+	end
+
+	local window_flags = imgui.WindowFlags.AlwaysAutoResize
+	window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
+	log("not_collapsed: " .. tostring(window_shown))
+
+	if not window_shown then
+		-- Window is collapsed
+		return
+	end
 
 --	if window_status_changed and not display_gui and ... first time closing ...
-    if display_gui then
-		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
+--if imgui.Begin("Damage log", display_gui, window_flags) then
+	imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
 
-		local table_flags = bit.bor(
-			imgui.TableFlags.Reorderable,
-			imgui.TableFlags.Hideable,
-			imgui.TableFlags.BordersOuter,
-			choice(not auto_size_columns, imgui.TableFlags.Resizable, 0),
-			choice(alternate_row_colors, imgui.TableFlags.RowBg, 0),
-			choice(show_grid_lines, imgui.TableFlags.BordersInner, 0)
-		)
+	local table_flags = bit.bor(
+		imgui.TableFlags.Reorderable,
+		imgui.TableFlags.Hideable,
+		imgui.TableFlags.BordersOuter,
+		choice(not auto_size_columns, imgui.TableFlags.Resizable, 0),
+		choice(alternate_row_colors, imgui.TableFlags.RowBg, 0),
+		choice(show_grid_lines, imgui.TableFlags.BordersInner, 0)
+	)
 
-		imgui.BeginTable("Damage", 5, table_flags)
+	imgui.BeginTable("Damage", 5, table_flags)
 
-		-- Column setup + headers
-		imgui.TableSetupColumn("Source")
-		imgui.TableSetupColumn("Type")
-		imgui.TableSetupColumn("Damage")
-		imgui.TableSetupColumn("HP")
-		imgui.TableSetupColumn("Time")
-		imgui.TableHeadersRow()
+	-- Column setup + headers
+	imgui.TableSetupColumn("Source")
+	imgui.TableSetupColumn("Type")
+	imgui.TableSetupColumn("Damage")
+	imgui.TableSetupColumn("HP")
+	imgui.TableSetupColumn("Time")
+	imgui.TableHeadersRow()
 
-		for row = 1, math.min(num_rows, List.length(raw_damage_data)) do
-			-- The data is stored such that the most recent data is at index num_rows,
-			-- but we need to draw it from the top. However, if there are fewer than
-			-- num_rows (usually 10) hits, indices below 10 may be nil, so in that case
-			-- we need to look at a larger index.
-			local data_index = row + (num_rows - List.length(raw_damage_data))
-			imgui.TableNextRow()
+	for row = 1, math.min(num_rows, List.length(raw_damage_data)) do
+		-- The data is stored such that the most recent data is at index num_rows,
+		-- but we need to draw it from the top. However, if there are fewer than
+		-- num_rows (usually 10) hits, indices below 10 may be nil, so in that case
+		-- we need to look at a larger index.
+		local data_index = row + (num_rows - List.length(raw_damage_data))
+		imgui.TableNextRow()
 
-			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index].source)
+		imgui.TableNextColumn()
+		imgui.Text(gui_data[data_index].source)
 
-			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index].type)
+		imgui.TableNextColumn()
+		imgui.Text(gui_data[data_index].type)
 
-			imgui.TableNextColumn()
-			local is_healing, damage = unpack(gui_data[data_index].damage)
-			if is_healing then
-				imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
-			else
-				imgui.Text(damage)
-			end
-
-			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index].hp)
-
-			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index].time)
+		imgui.TableNextColumn()
+		local is_healing, damage = unpack(gui_data[data_index].damage)
+		if is_healing then
+			imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
+		else
+			imgui.Text(damage)
 		end
 
-		-- Add popup to right-clicking on any of the columns (except the header)
-		local is_any_column_hovered = false
-		for column = 1, 5 do
-			if bit.band(imgui.TableGetColumnFlags(column - 1), imgui.TableColumnFlags.IsHovered) then
-				is_any_column_hovered = true
-				break
-			end
+		imgui.TableNextColumn()
+		imgui.Text(gui_data[data_index].hp)
+
+		imgui.TableNextColumn()
+		imgui.Text(gui_data[data_index].time)
+	end
+
+	-- Add popup to right-clicking on any of the columns (except the header)
+	local is_any_column_hovered = false
+	for column = 1, 5 do
+		if bit.band(imgui.TableGetColumnFlags(column - 1), imgui.TableColumnFlags.IsHovered) then
+			is_any_column_hovered = true
+			break
 		end
+	end
 
-		imgui.PushID("123")
-		if is_any_column_hovered and not imgui.IsAnyItemHovered() and imgui.IsMouseReleased(1) then
-			imgui.OpenPopup("SettingsPopup")
+	imgui.PushID("123")
+	if is_any_column_hovered and not imgui.IsAnyItemHovered() and imgui.IsMouseReleased(1) then
+		imgui.OpenPopup("SettingsPopup")
+	end
+
+	if imgui.BeginPopup("SettingsPopup") then
+		imgui.Text("Settings are applied and saved immediately.")
+
+		if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
+		if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
+
+		_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
+		_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
+
+		if imgui.Button("Close") then
+			imgui.CloseCurrentPopup()
 		end
+		imgui.EndPopup()
+	end
+	imgui.PopID()
 
-		if imgui.BeginPopup("SettingsPopup") then
-			imgui.Text("Settings are applied and saved immediately.")
-
-			if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
-			if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
-
-			_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
-			_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
-
-			if imgui.Button("Close") then
-				imgui.CloseCurrentPopup()
-			end
-			imgui.EndPopup()
-		end
-		imgui.PopID()
-
-		imgui.EndTable()
-		imgui.PopStyleVar()
-        imgui.End() -- Damage log window
-    end
+	imgui.EndTable()
+	imgui.PopStyleVar()
+	imgui.End() -- Damage log window
 end
 
 --- Convert the damage data to what we want to display.
@@ -207,10 +217,6 @@ function OnWorldPostUpdate()
 	-- Default keys are Left Control + E
 	if InputIsKeyDown(224) and InputIsKeyJustDown(8) then
 		display_gui = not display_gui
-	end
-
-	if not display_gui then
-		return
 	end
 
 	-- Recalculate at least once a second, since we need to update the time column
