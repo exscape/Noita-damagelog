@@ -29,7 +29,7 @@ function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
 	local diff = current_time - time
 	if diff < 0 then
-		return "future"
+		return "?"
 	elseif diff < 0.8 then
 		return "now"
 	elseif diff < 60 then
@@ -61,28 +61,35 @@ end
 function draw_gui()
 	if not imgui then return end
 
+	-- TODO: enable the close button
+	 local window_flags = imgui.WindowFlags.AlwaysAutoResize
 	imgui.SetNextWindowPos(40, 85, imgui.Cond.Once)
---    imgui.SetNextWindowSize(800, 400, imgui.Cond.Once)
-    if imgui.Begin("Damage log", true, imgui.WindowFlags.AlwaysAutoResize) then
-		imgui.BeginTable("Damage", 5, imgui.TableFlags.Borders)
+	--imgui.SetNextWindowSizeConstraints(0, -1, 10000, -1)
 
-		-- Draw the header
-		imgui.TableNextRow(imgui.TableRowFlags.Headers)
-		imgui.TableNextColumn()
-		imgui.Text("Source")
-		imgui.TableNextColumn()
-		imgui.Text("Type")
-		imgui.TableNextColumn()
-		imgui.Text("Damage")
-		imgui.TableNextColumn()
-		imgui.Text("HP")
-		imgui.TableNextColumn()
-		imgui.Text("Time")
+--    imgui.SetNextWindowSize(width, 0, imgui.Cond.Always)
+    if imgui.Begin("Damage log", true, window_flags) then
+--		_, width = imgui.SliderInt("Window width", width, 100, 2000)
+		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
+		imgui.BeginTable("Damage", 5, bit.bor(
+			imgui.TableFlags.Resizable,
+			imgui.TableFlags.Reorderable,
+			imgui.TableFlags.Hideable,
+			imgui.TableFlags.Borders
+		))
+
+		-- Column setup + headers
+		imgui.TableSetupColumn("Source")
+		imgui.TableSetupColumn("Type")
+		imgui.TableSetupColumn("Damage")
+		imgui.TableSetupColumn("HP")
+		imgui.TableSetupColumn("Time")
+		imgui.TableHeadersRow()
 
 		for row = 1, math.min(num_rows, List.length(raw_damage_data)) do
-			-- The data is stored such that the most recent data is at index 10,
-			-- but we need to draw it from the top. However, if there is less than
-			-- num_rows (usually 10) hits, indices below 10 may be nil.
+			-- The data is stored such that the most recent data is at index num_rows,
+			-- but we need to draw it from the top. However, if there are fewer than
+			-- num_rows (usually 10) hits, indices below 10 may be nil, so in that case
+			-- we need to look at a larger index.
 			local data_index = row + (num_rows - List.length(raw_damage_data))
 			imgui.TableNextRow()
 
@@ -95,7 +102,7 @@ function draw_gui()
 			imgui.TableNextColumn()
 			local is_healing, damage = unpack(gui_data[data_index][DAMAGE])
 			if is_healing then
-				imgui.TextColored(0.3, 1.0, 0.3, 1.0, damage)
+				imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
 			else
 				imgui.Text(damage)
 			end
@@ -107,6 +114,7 @@ function draw_gui()
 			imgui.Text(gui_data[data_index][TIME])
 		end
 		imgui.EndTable()
+		imgui.PopStyleVar()
         imgui.End() -- Damage log window
     end
 end
@@ -132,6 +140,7 @@ function update_gui_data()
 		local type = d[2]
 		if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
 		if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+		type = (type:gsub("^%l", string.upper))
 
 		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
 		gui_data[row][SOURCE] = source
