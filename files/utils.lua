@@ -25,7 +25,7 @@ function choice(condition, if_true, if_false)
 end
 
 ----- Double ended queue implementation from https://www.lua.org/pil/11.4.html
-List = {}
+local List = {}
 function List.new ()
   return {first = 0, last = -1}
 end
@@ -104,6 +104,4 @@ function load_damage_data()
 	return safe_deserialize(data)
 end
 
--- Bit of a hack, but easy and it works.
--- Should probably return a table that could hold other exports, too.
-return List
+return { ["List"] = List }

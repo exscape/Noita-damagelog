@@ -1,4 +1,5 @@
-dofile_once("mods/damagelog/files/utils.lua")
+local Utils = dofile_once("mods/damagelog/files/utils.lua")
+local List = Utils.List
 dofile_once("mods/damagelog/files/damage.lua")
 
 local imgui = load_imgui({version="1.17.0", mod="damagelog"})
@@ -13,14 +14,6 @@ local raw_damage_data = List.new()
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 -- Uses the indices below.
 local gui_data = {}
-
--- Indices for gui_data
-local SOURCE = 1
-local TYPE = 2
-local DAMAGE = 3
-local HP = 4
-local TIME = 5
-local HIDDEN = 6
 
 local latest_update_frame = -1
 local display_gui = true
@@ -101,13 +94,13 @@ function draw_gui()
 			imgui.TableNextRow()
 
 			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index][SOURCE])
+			imgui.Text(gui_data[data_index].source)
 
 			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index][TYPE])
+			imgui.Text(gui_data[data_index].type)
 
 			imgui.TableNextColumn()
-			local is_healing, damage = unpack(gui_data[data_index][DAMAGE])
+			local is_healing, damage = unpack(gui_data[data_index].damage)
 			if is_healing then
 				imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
 			else
@@ -115,10 +108,10 @@ function draw_gui()
 			end
 
 			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index][HP])
+			imgui.Text(gui_data[data_index].hp)
 
 			imgui.TableNextColumn()
-			imgui.Text(gui_data[data_index][TIME])
+			imgui.Text(gui_data[data_index].time)
 		end
 
 		-- Add popup to right-clicking on any of the columns (except the header)
@@ -172,28 +165,26 @@ function update_gui_data()
 		end
 
 		local dmg_index = raw_damage_data["last"] - (num_rows - row)
-		local d = raw_damage_data[dmg_index]
+		local damage_entry = raw_damage_data[dmg_index]
 
-		local source = d[1]
-		local type = d[2]
+		local source = damage_entry.source
+		local type = damage_entry.type
 		if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
 		if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
 		type = (type:gsub("^%l", string.upper))
 
 		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
-		gui_data[row][SOURCE] = source
-		gui_data[row][TYPE] = type
-		gui_data[row][DAMAGE] = { d[3] < 0, string.format("%.0f", d[3]) }
-		gui_data[row][HP] = format_hp(d[4])
-		gui_data[row][TIME] = format_time(d[5])
-		gui_data[row][HIDDEN] = false
+		gui_data[row].source = source
+		gui_data[row].type = type
+		gui_data[row].damage = { damage_entry.damage < 0, string.format("%.0f", damage_entry.damage) }
+		gui_data[row].hp = format_hp(damage_entry.hp)
+		gui_data[row].time = format_time(damage_entry.time)
 	end
 end
 
 function OnModPreInit()
 	for i = 1, num_rows do
 		gui_data[i] = {}
-		gui_data[i][HIDDEN] = true
 	end
 end
 
