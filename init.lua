@@ -19,9 +19,9 @@ local latest_update_frame = -1
 local display_gui = true
 
 -- TEMPORARY settings, reset on restart
--- Will be removed/reworked
+-- Will be removed/reworked to be persistent.
 local auto_size_columns = true
-local alternate_row_colors = true
+local alternate_row_colors = false
 local show_grid_lines = true
 
 function format_time(time)
@@ -63,7 +63,10 @@ function draw_gui()
 	-- TODO: enable the close button
 	 local window_flags = imgui.WindowFlags.AlwaysAutoResize
 	imgui.SetNextWindowPos(40, 85, imgui.Cond.Once)
-    if imgui.Begin("Damage log", true, window_flags) then
+	window_status_changed, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
+
+--	if window_status_changed and not display_gui and ... first time closing ...
+    if display_gui then
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
 
 		local table_flags = bit.bor(
