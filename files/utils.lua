@@ -18,6 +18,12 @@ function log(s)
 	GamePrint("!!! " .. tostring(s))
 end
 
+-- Roughly equivalent to the ternary operator.
+-- Always evaluates every condition, however!
+function choice(condition, if_true, if_false)
+    if condition then return if_true else return if_false end
+end
+
 ----- Double ended queue implementation from https://www.lua.org/pil/11.4.html
 List = {}
 function List.new ()

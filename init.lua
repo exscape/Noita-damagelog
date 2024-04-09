@@ -25,6 +25,12 @@ local HIDDEN = 6
 local latest_update_frame = -1
 local display_gui = true
 
+-- TEMPORARY settings, reset on restart
+-- Will be removed/reworked
+local auto_size_columns = true
+local alternate_row_colors = true
+local show_grid_lines = true
+
 function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
 	local diff = current_time - time
@@ -64,18 +70,19 @@ function draw_gui()
 	-- TODO: enable the close button
 	 local window_flags = imgui.WindowFlags.AlwaysAutoResize
 	imgui.SetNextWindowPos(40, 85, imgui.Cond.Once)
-	--imgui.SetNextWindowSizeConstraints(0, -1, 10000, -1)
-
---    imgui.SetNextWindowSize(width, 0, imgui.Cond.Always)
     if imgui.Begin("Damage log", true, window_flags) then
---		_, width = imgui.SliderInt("Window width", width, 100, 2000)
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
-		imgui.BeginTable("Damage", 5, bit.bor(
-			imgui.TableFlags.Resizable,
+
+		local table_flags = bit.bor(
 			imgui.TableFlags.Reorderable,
 			imgui.TableFlags.Hideable,
-			imgui.TableFlags.Borders
-		))
+			imgui.TableFlags.BordersOuter,
+			choice(not auto_size_columns, imgui.TableFlags.Resizable, 0),
+			choice(alternate_row_colors, imgui.TableFlags.RowBg, 0),
+			choice(show_grid_lines, imgui.TableFlags.BordersInner, 0)
+		)
+
+		imgui.BeginTable("Damage", 5, table_flags)
 
 		-- Column setup + headers
 		imgui.TableSetupColumn("Source")
@@ -113,6 +120,37 @@ function draw_gui()
 			imgui.TableNextColumn()
 			imgui.Text(gui_data[data_index][TIME])
 		end
+
+		-- Add popup to right-clicking on any of the columns (except the header)
+		local is_any_column_hovered = false
+		for column = 1, 5 do
+			if bit.band(imgui.TableGetColumnFlags(column - 1), imgui.TableColumnFlags.IsHovered) then
+				is_any_column_hovered = true
+				break
+			end
+		end
+
+		imgui.PushID("123")
+		if is_any_column_hovered and not imgui.IsAnyItemHovered() and imgui.IsMouseReleased(1) then
+			imgui.OpenPopup("SettingsPopup")
+		end
+
+		if imgui.BeginPopup("SettingsPopup") then
+			imgui.Text("Settings are applied and saved immediately.")
+
+			if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
+			if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
+
+			_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
+			_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
+
+			if imgui.Button("Close") then
+				imgui.CloseCurrentPopup()
+			end
+			imgui.EndPopup()
+		end
+		imgui.PopID()
+
 		imgui.EndTable()
 		imgui.PopStyleVar()
         imgui.End() -- Damage log window
