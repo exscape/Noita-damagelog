@@ -83,11 +83,15 @@ end
 -- In case this is still true, let's avoid writing such strings.
 function safe_serialize(s)
 	local serialized = smallfolk.dumps(s)
-	return (serialized:gsub([["]], [[!]]))
+  if serialized:find("@") then
+    serialized:gsub("@", "")
+    log("damagelog Warning: removed @ from string, may cause bugs")
+  end
+	return (serialized:gsub([["]], [[@]]))
 end
 
 function safe_deserialize(s)
-	return smallfolk.loads((s:gsub([[!]], [["]])))
+	return smallfolk.loads((s:gsub([[@]], [["]])))
 end
 
 function store_damage_data(data)
