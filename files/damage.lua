@@ -165,7 +165,7 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
 
     local damage_type = message
     local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
-    if hp_after < 0 then hp_after = 0 end
+    if hp_after < 0 then hp_after = 0 end -- Technically a bug? "The gods are very curious"
 
     -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
     -- if the last damage entry was from the same source *AND* it was recent.
@@ -186,13 +186,13 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
 
     List.pushright(damage_data, last_damage_entry)
 
-    while damage_data.last - damage_data.first >= 10 do
-        -- Limit the list to (currently) 10 entries.
+
+    -- TODO: 30 for testing!
+    while damage_data.last - damage_data.first >= 30 do
         List.popleft(damage_data)
     end
 
-    len = store_damage_data(damage_data)
 
-    --- TODO: remove this once it's clear it doesn't trigger -- though it should be OK regardless,
-    --- TODO: there doesn't seem to be any measureable performance loss
+
+    len = store_damage_data(damage_data)
 end

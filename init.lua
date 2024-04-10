@@ -6,13 +6,11 @@ local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
 -- NOTE: also needs to be changed in damage.lua.
 -- Might be changed to a proper setting soon. As of this writing the new UI is not even implemented.
-local num_rows = 10
+local num_rows = 30
 
--- A copy of the data from damage.lua, untouched
 local raw_damage_data = List.new()
 
 -- The processed version of the damage data, i.e. formatted strings for the GUI
--- Uses the indices below.
 local gui_data = {}
 
 local latest_update_frame = -1
