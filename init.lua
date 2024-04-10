@@ -4,8 +4,7 @@ dofile_once("mods/damagelog/files/damage.lua")
 
 local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
--- NOTE: also needs to be changed in damage.lua.
--- Might be changed to a proper setting soon. As of this writing the new UI is not even implemented.
+-- TODO: temporary, remove once proper setting is in place
 local num_rows = 30
 
 local raw_damage_data = List.new()
@@ -21,6 +20,8 @@ local display_gui = true
 local auto_size_columns = true
 local alternate_row_colors = false
 local show_grid_lines = true
+local foreground_opacity = 0.7
+local background_opacity = 0.1
 
 function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
@@ -60,22 +61,25 @@ local collapsed = false
 function draw_gui()
 	if not imgui then return end
 
-
 	if not display_gui then
 		return
 	end
 
 	local window_flags = imgui.WindowFlags.AlwaysAutoResize
+--	imgui.PushStyleColor(imgui.Col.WindowBg, 0, 0, 0, background_opacity)
+	imgui.SetNextWindowBgAlpha(background_opacity)
+	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 0, 0)
+	imgui.PushStyleColor(imgui.Col.Text, 1, 1, 1, foreground_opacity)
+
+	-- if window_status_changed and not display_gui and ... first time closing ...
+	-- show help
 	window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
-	log("not_collapsed: " .. tostring(window_shown))
 
 	if not window_shown then
 		-- Window is collapsed
 		return
 	end
 
---	if window_status_changed and not display_gui and ... first time closing ...
---if imgui.Begin("Damage log", display_gui, window_flags) then
 	imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
 
 	local table_flags = bit.bor(
@@ -146,6 +150,9 @@ function draw_gui()
 		if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
 		if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
 
+		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
+		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
+
 		_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
 		_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
 
@@ -159,6 +166,8 @@ function draw_gui()
 	imgui.EndTable()
 	imgui.PopStyleVar()
 	imgui.End() -- Damage log window
+	imgui.PopStyleColor()
+	imgui.PopStyleVar()
 end
 
 --- Convert the damage data to what we want to display.
@@ -246,8 +255,11 @@ function OnPlayerSpawned(player_entity)
 		ComponentAddTag(lua_component, "damagelog_damage_luacomponent")
 	end
 
-	-- TODO: remove later if we want this to be stored across sessions.
 	-- Cleared for now to prevent serialization bugs to carry over between restarts.
---	local empty_list = safe_serialize(List.new())
---	GlobalsSetValue("damagelog_damage_data", empty_list)
+	-- TODO: If this is left out (remains commented), the "time" column needs fixing!
+	-- TODO: Damage is currently stored relative to the elapsed time since load, which of course
+	-- TODO: resets on load, so the times will be all wrong.
+	-- local empty_list = safe_serialize(List.new())
+	-- lGlobalsSetValue("damagelog_damage_data", empty_list)
+
 end
