@@ -36,22 +36,26 @@ function format_time(time)
 	end
 end
 
- function format_hp(hp)
-	if hp >= 1000000 then
-		hp_format = "%.4G"
+-- Uses a simple human-readable format for only partially insane numbers (millions, billions).
+-- Reverts to scientific notation shorthand (e.g. 1.23e14) for the truly absurd ones.
+ function format_number(n)
+	if n < 1000000 then -- below 1 million, show as plain digits e.g. 987654
+		-- Format, and prevent string.format from rounding to 0
+		local formatted = string.format("%.0f", n)
+		if formatted == "0" and n > 0 then
+			formatted = "<1"
+		end
+		return formatted
+	elseif n < 1000000000 then
+		-- Below 1 billion, show as e.g. 123.4M
+		return string.format("%.4gM", n/1000000)
+	elseif n < 1000000000000 then
+		-- Below 1 trillion, show as e.g. 123.4B
+		return string.format("%.4gB", n/1000000000)
 	else
-		hp_format = "%.0f"
+		-- Format to exponent notation, and convert e.g. 1.3e+007 to 1.3e7
+		return (string.format("%.4g", n):gsub("e%+0*", "e"))
 	end
-
-	-- Format, and convert e.g. 1.3E+007 to 1.3E7
-	formatted_hp = (string.format(hp_format, hp):gsub("E%+0*", "E"))
-
-	-- Prevent string.format from rounding to 0... in most cases
-	if formatted_hp == "0" and hp > 0 then
-		formatted_hp = string.format("%.03f", hp)
-	end
-
-	return formatted_hp
 end
 
 function draw_gui()
@@ -208,8 +212,8 @@ function update_gui_data()
 		List.pushright(gui_data, {
 			source = source,
 			type = type,
-			damage = { damage_entry.damage < 0, string.format("%.0f", damage_entry.damage) },
-			hp = format_hp(damage_entry.hp),
+			damage = { damage_entry.damage < 0, format_number(damage_entry.damage) },
+			hp = format_number(damage_entry.hp),
 			time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
 			id = damage_entry.id
 		})
