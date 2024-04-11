@@ -46,6 +46,7 @@ local player_spawn_time = 0
 -- Will be removed/reworked to be persistent.
 local max_damage_entries = 200 -- TODO: what's a reasonable limit?
 local auto_size_columns = true
+local font = 1
 local alternate_row_colors = false
 local show_grid_lines = true
 local foreground_opacity = 0.7
@@ -53,6 +54,13 @@ local background_opacity = 0.1
 local max_rows_to_show = 10 -- TODO: implement this as a setting in the GUI
 local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
 local display_gui = display_gui_on_load
+
+local fonts = {
+	{"Noita Pixel", imgui.GetNoitaFont()},
+	{"Noita Pixel x1.4", imgui.GetNoitaFont1_4x()},
+	{"ImGui (Proggy Clean)", imgui.GetImGuiFont()},
+	{"Source Code Pro", imgui.GetMonospaceFont()},
+}
 
 function format_time(time, lower_accuracy)
 	local current_time = GameGetRealWorldTimeSinceStarted()
@@ -139,6 +147,8 @@ function draw_gui()
 
 	local window_flags = imgui.WindowFlags.AlwaysAutoResize
 --	imgui.PushStyleColor(imgui.Col.WindowBg, 0, 0, 0, background_opacity)
+
+	imgui.PushFont(fonts[font][2])
 	imgui.SetNextWindowBgAlpha(background_opacity)
 	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 0, 0)
 	imgui.PushStyleColor(imgui.Col.Text, 1, 1, 1, foreground_opacity)
@@ -154,7 +164,12 @@ function draw_gui()
 		return
 	end
 
-	imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
+	if font == 2 then
+		-- 1.4x font needs more padding to look right
+		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 10, 6)
+	else
+		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
+	end
 
 	local table_flags = bit.bor(
 		imgui.TableFlags.Reorderable,
@@ -168,12 +183,20 @@ function draw_gui()
 	imgui.BeginTable("Damage", 5, table_flags)
 
 	-- Column setup + headers
+	if font == 2 then
+		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 10, 8)
+	end
+
 	imgui.TableSetupColumn("Source")
 	imgui.TableSetupColumn("Type")
 	imgui.TableSetupColumn("Damage")
 	imgui.TableSetupColumn("HP")
 	imgui.TableSetupColumn("Time")
 	imgui.TableHeadersRow()
+
+	if font == 2 then
+		imgui.PopStyleVar()
+	end
 
 	if List.length(gui_data) == 0 then
 		imgui.TableNextRow()
@@ -242,12 +265,16 @@ function draw_gui()
 		imgui.OpenPopup("SettingsPopup")
 	end
 
+	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 6, 6)
 	if imgui.BeginPopup("SettingsPopup") then
 		imgui.Text("Settings are applied and saved immediately.")
 
 		if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
 		if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
 
+		_, font = imgui.Combo("Font", font, {"Noita Pixel", "Noita Pixel 1.4x", "ImGui (Proggy Clean)", "Source Code Pro"})
+
+		_, max_rows_to_show = imgui.SliderInt("Max rows to show", max_rows_to_show, 1, 30)
 		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
 		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
 
@@ -257,7 +284,8 @@ function draw_gui()
 		if imgui.Button("Close") then
 			imgui.CloseCurrentPopup()
 		end
-		imgui.EndPopup()
+		imgui.EndPopup() -- SettingsPopup
+		imgui.PopStyleVar()
 	end
 	imgui.PopID()
 
@@ -266,6 +294,7 @@ function draw_gui()
 	imgui.End() -- Damage log window
 	imgui.PopStyleColor()
 	imgui.PopStyleVar()
+	imgui.PopFont()
 end
 
 --- Convert the damage data to what we want to display.
