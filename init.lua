@@ -30,9 +30,15 @@ function format_time(time)
 		return "now"
 	elseif diff < 60 then
 		return string.format("%.0fs", diff)
-	else
+	elseif diff < 300 then
 		local min, sec = math.floor(diff / 60), math.floor(diff % 60)
 		return string.format("%.0fm %.0fs", min, sec)
+	elseif diff < 7200 then
+		-- Don't show seconds since it's mostly annoying at this point
+		return string.format("%.0fm", diff / 60)
+	else
+		local hr, min = math.floor(diff / 3600), math.floor((diff % 3600) / 60)
+		return string.format("%.0fh %.0fm", hr, min)
 	end
 end
 
