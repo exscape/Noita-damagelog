@@ -1,14 +1,14 @@
+local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 local Utils = dofile_once("mods/damagelog/files/utils.lua")
 local List = Utils.List
-local imgui = load_imgui({version="1.17.0", mod="damagelog"})
+
+-- The processed version of the damage data, i.e. formatted strings for the GUI
+local gui_data = List.new()
 
 -- State that can't be affected by the player
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
-
--- The processed version of the damage data, i.e. formatted strings for the GUI
-local gui_data = List.new()
 
 -- TEMPORARY settings, reset on restart
 -- Will be removed/reworked to be persistent.
@@ -18,8 +18,9 @@ local alternate_row_colors = false
 local show_grid_lines = true
 local foreground_opacity = 0.7
 local background_opacity = 0.1
-local max_rows_to_show = 10
-local display_gui = true
+local max_rows_to_show = 10 -- TODO: implement this as a setting in the GUI
+local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
+local display_gui = display_gui_on_load
 
 function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
