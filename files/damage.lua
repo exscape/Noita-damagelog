@@ -5,7 +5,6 @@ local List = Utils.List
 local additional_entities = dofile_once("mods/damagelog/files/additional_entities.lua")
 
 local damage_data = List.new() -- All damage that has not yet been received and parsed by the GUI code
-local last_damage_entry = nil  -- The very last entry, stored separately as we need it for pooling
 local next_hit_id = 1          -- The ID that will be used for the next hit (i.e. no hit with this ID exists yet)
 
 local function get_entity_name(entity_id)
@@ -161,19 +160,9 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
     -- if the last damage entry was from the same source *AND* it was recent.
     local pooled_damage = 0
-    if last_damage_entry ~= nil and should_pool_damage(source, message) then
-        pooled_damage = last_damage_entry.damage
+    if not List.isempty(damage_data) and should_pool_damage(source, message) then
+        pooled_damage = List.peekright(damage_data).damage
     end
-
-    last_damage_entry = {
-        source = source,
-        type = damage_type,
-        damage = damage + pooled_damage,
-        hp = hp_after,
-        time = GameGetRealWorldTimeSinceStarted(),
-        frame = GameGetFrameNum(),
-        id = next_hit_id
-    }
 
     -- Clean up old entries from damage_data; i.e. entries that have already been received by the GUI code
     local highest_read = tonumber(GlobalsGetValue("damagelog_highest_id_read", "0"))
@@ -183,7 +172,16 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     end
 
     -- Store the data in the list and send it to the GUI
-    List.pushright(damage_data, last_damage_entry)
+    List.pushright(damage_data, {
+        source = source,
+        type = damage_type,
+        damage = damage + pooled_damage,
+        hp = hp_after,
+        time = GameGetRealWorldTimeSinceStarted(),
+        frame = GameGetFrameNum(),
+        id = next_hit_id
+    })
+
     store_damage_data(damage_data, next_hit_id)
     next_hit_id = next_hit_id + 1
 end
