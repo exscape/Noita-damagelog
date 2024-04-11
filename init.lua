@@ -10,6 +10,7 @@ local num_rows = 30
 local MAX_DAMAGE_ENTRIES = 200 -- TODO: what's a reasonable limit?
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
+local player_spawn_time = 0
 
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 local gui_data = List.new()
@@ -112,7 +113,7 @@ function draw_gui()
 		imgui.TableNextColumn()
 		imgui.Text(" ")
 		imgui.TableNextColumn()
-		imgui.Text("inf")
+		imgui.Text(format_time(player_spawn_time))
 	end
 
 	for row = gui_data.first, gui_data.last do
@@ -213,7 +214,7 @@ function update_gui_data()
 			type = type,
 			damage = { damage_entry.damage < 0, string.format("%.0f", damage_entry.damage) },
 			hp = format_hp(damage_entry.hp),
-			time = damage_entry.time, -- Formatted on display
+			time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
 			id = damage_entry.id
 		})
 
@@ -291,4 +292,6 @@ function OnPlayerSpawned(player_entity)
 		})
 		ComponentAddTag(lua_component, "damagelog_damage_luacomponent")
 	end
+
+	player_spawn_time = GameGetRealWorldTimeSinceStarted()
 end
