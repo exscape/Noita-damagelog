@@ -2,6 +2,38 @@ local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 local Utils = dofile_once("mods/damagelog/files/utils.lua")
 local List = Utils.List
 
+--[[
+	Here's a basic overview of how the mod works, for my future self, and others interested.
+	Hopefully this text won't become outdated; I've tried to keep the code farily self-documenting
+	to avoid stale comments.
+
+	First, it depends on dextercd's excellent NoitaDearImGui mod that brings the Dear ImGui library
+	to Noita.
+	This was a must. It has the downside that the mod and its requirements can't be placed on the
+	Steam Workshop, and that it requires "unsafe" mods to be enabled in Noita.
+	However, the advantages were just too great to ignore. I went from 6 ms(!) to render my UI down to a small
+	enough number that I can't tell. Maybe about 0.1 ms most of the time, with 10 rows showing.
+	6 ms is enough to bring you from hovering around 60 fps down to 44 fps while the GUI is shown, and
+	with 20-25 rows shown the hit was far larger, going down to 20 fps and below.
+	In addition, we get a far nicer design, easy settings, column reordering, column resizing and so much more.
+
+	The mod is set up in OnPlayerSpawned (in this file) by adding a LuaComponent that calls
+	damage_received() (in files/damage.lua) whenever the player takes damage.
+
+	damage_received() stores the damage in a List (technically a double-ended queue), and then
+	serializes it to a plain-text string and stores it with GlobalsSetValue.
+	That is necessary because scripts can't easily communicate with one another; they seem to run
+	in different Lua contexts, so they can't share larger amounts of data easily.
+	It also stores the ID of the latest hit that it has written to a separate global.
+
+	OnWorldPostUpdate then reads the ID of the latest hit and compares it to the highest ID it has seen.
+	If the latest ID is higher, it calls update_gui_data() which transforms some of the values into GUI-friendly
+	strings. It then sets a global telling damage.lua which IDs it has seen, so that damage.lua can remove
+	those hits from the List on the next hit, so that they won't be serialized/deserialized and transferred again.
+
+	Finally, draw_gui() uses the transformed GUI data and draws it to the screen, if display_gui is set.
+]]
+
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 local gui_data = List.new()
 
