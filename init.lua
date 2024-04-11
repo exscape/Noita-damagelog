@@ -4,10 +4,7 @@ dofile_once("mods/damagelog/files/damage.lua")
 
 local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
--- TODO: temporary, remove once proper setting is in place
-local num_rows = 30
-
-local MAX_DAMAGE_ENTRIES = 200 -- TODO: what's a reasonable limit?
+-- State that can't be affected by the player
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
@@ -15,15 +12,16 @@ local player_spawn_time = 0
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 local gui_data = List.new()
 
-local display_gui = true
-
 -- TEMPORARY settings, reset on restart
 -- Will be removed/reworked to be persistent.
+local max_damage_entries = 200 -- TODO: what's a reasonable limit?
 local auto_size_columns = true
 local alternate_row_colors = false
 local show_grid_lines = true
 local foreground_opacity = 0.7
 local background_opacity = 0.1
+local max_rows_to_show = 10
+local display_gui = true
 
 function format_time(time)
 	local current_time = GameGetRealWorldTimeSinceStarted()
@@ -116,24 +114,24 @@ function draw_gui()
 		imgui.Text(format_time(player_spawn_time))
 	end
 
-	for row = gui_data.first, gui_data.last do
-		-- The data is stored such that the most recent data is at index num_rows,
-		-- but we need to draw it from the top. However, if there are fewer than
-		-- num_rows (usually 10) hits, indices below 10 may be nil, so in that case
-		-- we need to look at a larger index.
-		--local data_index = row + (num_rows - List.length(raw_damage_data))
+	local first_index
+	if List.length(gui_data) <= max_rows_to_show then
+		first_index = gui_data.first
+	else
+		first_index = gui_data.last - max_rows_to_show + 1
+	end
 
-		local data_index = row
+	for row = first_index, gui_data.last do
 		imgui.TableNextRow()
 
 		imgui.TableNextColumn()
-		imgui.Text(gui_data[data_index].source)
+		imgui.Text(gui_data[row].source)
 
 		imgui.TableNextColumn()
-		imgui.Text(gui_data[data_index].type)
+		imgui.Text(gui_data[row].type)
 
 		imgui.TableNextColumn()
-		local is_healing, damage = unpack(gui_data[data_index].damage)
+		local is_healing, damage = unpack(gui_data[row].damage)
 		if is_healing then
 			imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
 		else
@@ -141,10 +139,10 @@ function draw_gui()
 		end
 
 		imgui.TableNextColumn()
-		imgui.Text(gui_data[data_index].hp)
+		imgui.Text(gui_data[row].hp)
 
 		imgui.TableNextColumn()
-		imgui.Text(format_time(gui_data[data_index].time))
+		imgui.Text(format_time(gui_data[row].time))
 	end
 
 	-- Add popup to right-clicking on any of the columns (except the header)
@@ -222,7 +220,7 @@ function update_gui_data()
 	end
 
 	-- Clean up excessive entries
-	while List.length(gui_data) > MAX_DAMAGE_ENTRIES do
+	while List.length(gui_data) > max_damage_entries do
 		List.popleft(gui_data)
 	end
 end
