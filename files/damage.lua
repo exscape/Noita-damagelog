@@ -46,27 +46,6 @@ local function get_entity_name(entity_id)
     end
 end
 
-local function lookup_damage_type(type)
-    -- Most of these will probably never trigger as the entity will be displayed instead of
-    -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
-    local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
-                           drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
-                           drowning = 1, kick = 1, fall = 1 }
-
-    local source
-    if simple_types[type] then
-        source = (type:gsub("^%l", string.upper)) -- Uppercased first letter
-    elseif type == "radioactive" then
-        source = "Toxic sludge"
-    elseif type == "physicshit" then
-        source = "Physics"
-    else
-        source = "TYPE: " .. type
-    end
-
-    return source
-end
-
 local function get_player_entity()
 	local players = EntityGetWithTag("player_unit")
 	if #players == 0 then
@@ -127,33 +106,64 @@ local function should_pool_damage(source, message)
     end
 end
 
--- Called by Noita every time the player takes damage
--- Hook is initialized in init.lua
-function damage_received( damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
-    damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
-
-    local damage_was_from_material = message:find("damage from material: ")
-    message = (message:gsub("damage from material: ", ""))
+local function damage_source_from_message_only(type)
+    -- Most of these will probably never trigger as the entity will be displayed instead of
+    -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
+    local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
+                           drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
+                           drowning = 1, kick = 1, fall = 1 }
 
     local source
+    if simple_types[type] then
+        source = (type:gsub("^%l", string.upper)) -- Uppercased first letter
+    elseif type == "radioactive" then
+        source = "Toxic sludge"
+    elseif type == "physicshit" then
+        source = "Physics"
+    else
+        source = "TYPE: " .. type
+    end
+
+    return source
+end
+
+local function source_and_type_from_entity_and_message(entity_thats_responsible, message)
+    local damage_was_from_material = message:find("damage from material: ")
+    message = (message:gsub("damage from material: ", ""))
+    local damage_type = (message:gsub("^%l", string.upper))
+
     if entity_thats_responsible ~= 0 then
         -- Show the responsible entity if one exists
-        source = get_entity_name(entity_thats_responsible)
+        return get_entity_name(entity_thats_responsible), damage_type
     elseif message:sub(1,8) == "$damage_" then
         -- No responsible entity; damage is something like toxic sludge, fire etc.
         -- Show that as the source.
-        source = lookup_damage_type(message:sub(9, #message))
+        return damage_source_from_message_only(message:sub(9, #message)), damage_type
     elseif damage_was_from_material then
-        source = (message:gsub("^%l", string.upper))
+        return (message:gsub("^%l", string.upper)), damage_type
     else
         -- Should never happen; displayed for debugging purposes so that the mod can be updated
-        source = "MSG: " .. message
         log("damagelog WARNING: unknown message: " .. tostring(message))
+        return "MSG: " .. message, damage_type
     end
+end
 
-    local damage_type = (message:gsub("^%l", string.upper))
+-- Called by Noita every time the player takes damage
+-- Hook is initialized in init.lua
+function damage_received(damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
+    local source, damage_type = source_and_type_from_entity_and_message(entity_thats_responsible, message)
+    damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
+
     local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
-    if hp_after < 0 then hp_after = 0 end -- Technically a bug? "The gods are very curious"
+    if hp_after < 0 then
+         -- Technically a bug? "The gods are very curious"
+        hp_after = 0
+    elseif hp_after < 1 then
+        hp_after = 1
+    else
+        -- The game GUI seems to do this; our display can show 1 hp extra without flooring first
+        hp_after = math.floor(hp_after)
+    end
 
     -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
     -- if the last damage entry was from the same source *AND* it was recent.
