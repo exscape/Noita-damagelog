@@ -1,7 +1,5 @@
 local Utils = dofile_once("mods/damagelog/files/utils.lua")
 local List = Utils.List
-dofile_once("mods/damagelog/files/damage.lua")
-
 local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
 -- State that can't be affected by the player
@@ -215,8 +213,6 @@ function update_gui_data()
 			time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
 			id = damage_entry.id
 		})
-
-		log("update_gui_data: received damage: source=" .. source .. ", damage=" .. tostring(damage_entry.damage))
 	end
 
 	-- Clean up excessive entries
@@ -262,8 +258,6 @@ function OnWorldPostUpdate()
 	end
 
 	local highest_id_written = tonumber(GlobalsGetValue("damagelog_highest_id_written", "0"))
-
-	-- Recalculate at least once a second, since we need to update the time column
 	if highest_id_written > highest_id_read then
 		update_gui_data()
 	end

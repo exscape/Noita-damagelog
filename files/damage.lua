@@ -8,7 +8,7 @@ local damage_data = List.new()
 local last_damage_entry = nil
 local hit_id = 1
 
-function get_entity_name(entity_id)
+local function get_entity_name(entity_id)
     if entity_id == 0 then
         return "Unknown"
     end
@@ -46,17 +46,7 @@ function get_entity_name(entity_id)
     end
 end
 
-function translate_message(message)
-    if #message < 1 then
-        return "-"
-    elseif string.sub(message, 1, 1) == "$" then
-        return "Translated: " .. GameTextGet(message)
-    else
-        return message
-    end
-end
-
-function lookup_damage_type(type)
+local function lookup_damage_type(type)
     -- Most of these will probably never trigger as the entity will be displayed instead of
     -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
     local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
@@ -77,7 +67,7 @@ function lookup_damage_type(type)
     return source
 end
 
-function get_player_entity()
+local function get_player_entity()
 	local players = EntityGetWithTag("player_unit")
 	if #players == 0 then
         return nil
@@ -86,7 +76,7 @@ function get_player_entity()
 	return players[1]
 end
 
-function get_player_health()
+local function get_player_health()
     local player = get_player_entity()
     if player == nil then
         return 0
@@ -104,7 +94,7 @@ function get_player_health()
 	return health
 end
 
-function should_pool_damage(source, message)
+local function should_pool_damage(source, message)
     -- TODO: expand with other sources
     local sources_to_pool = {
         Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
