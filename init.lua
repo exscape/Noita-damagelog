@@ -7,12 +7,13 @@ local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 -- TODO: temporary, remove once proper setting is in place
 local num_rows = 30
 
-local raw_damage_data = List.new()
+local MAX_DAMAGE_ENTRIES = 200 -- TODO: what's a reasonable limit?
+local initial_clear_completed = false
+local last_imgui_warning_time = -3
 
 -- The processed version of the damage data, i.e. formatted strings for the GUI
-local gui_data = {}
+local gui_data = List.new()
 
-local latest_update_frame = -1
 local display_gui = true
 
 -- TEMPORARY settings, reset on restart
@@ -56,12 +57,8 @@ end
 	return formatted_hp
 end
 
-local collapsed = false
-
 function draw_gui()
-	if not imgui then return end
-
-	if not display_gui then
+	if not display_gui or not imgui then
 		return
 	end
 
@@ -77,6 +74,8 @@ function draw_gui()
 
 	if not window_shown then
 		-- Window is collapsed
+		imgui.PopStyleVar()
+		imgui.PopStyleColor()
 		return
 	end
 
@@ -101,12 +100,29 @@ function draw_gui()
 	imgui.TableSetupColumn("Time")
 	imgui.TableHeadersRow()
 
-	for row = 1, math.min(num_rows, List.length(raw_damage_data)) do
+	if List.length(gui_data) == 0 then
+		imgui.TableNextRow()
+
+		imgui.TableNextColumn()
+		imgui.Text("Hitless")
+		imgui.TableNextColumn()
+		imgui.Text(" ")
+		imgui.TableNextColumn()
+		imgui.Text(" ")
+		imgui.TableNextColumn()
+		imgui.Text(" ")
+		imgui.TableNextColumn()
+		imgui.Text("inf")
+	end
+
+	for row = gui_data.first, gui_data.last do
 		-- The data is stored such that the most recent data is at index num_rows,
 		-- but we need to draw it from the top. However, if there are fewer than
 		-- num_rows (usually 10) hits, indices below 10 may be nil, so in that case
 		-- we need to look at a larger index.
-		local data_index = row + (num_rows - List.length(raw_damage_data))
+		--local data_index = row + (num_rows - List.length(raw_damage_data))
+
+		local data_index = row
 		imgui.TableNextRow()
 
 		imgui.TableNextColumn()
@@ -127,7 +143,7 @@ function draw_gui()
 		imgui.Text(gui_data[data_index].hp)
 
 		imgui.TableNextColumn()
-		imgui.Text(gui_data[data_index].time)
+		imgui.Text(format_time(gui_data[data_index].time))
 	end
 
 	-- Add popup to right-clicking on any of the columns (except the header)
@@ -174,48 +190,63 @@ end
 --- This is not done every frame for performance reasons, but rather when the data has changed.
 --- If e.g. on fire it WILL currently update every frame, however, since the damage data changes every frame.
 function update_gui_data()
-	latest_update_frame = GameGetFrameNum()
-	raw_damage_data = load_damage_data()
+	local raw_damage_data = load_damage_data()
 
-	for row = num_rows, 1, -1 do
-		local iteration = num_rows - row + 1 -- starting at 1, as usual in Lua
+	if List.length(raw_damage_data) < 1 then
+		error("damagelog: update_gui_data called with no new data!")
+		return
+	end
 
-		if iteration > List.length(raw_damage_data) then
-			return
-		end
-
-		local dmg_index = raw_damage_data["last"] - (num_rows - row)
-		local damage_entry = raw_damage_data[dmg_index]
+	-- Since damage.lua removes all previously read data prior to sending a new batch,
+	-- we want to process everything we just received, and don't need to perform any
+	-- kinds of checks here.
+	for i = raw_damage_data.first, raw_damage_data.last do
+		local damage_entry = raw_damage_data[i]
 
 		local source = damage_entry.source
 		local type = damage_entry.type
 		if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
 		if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
-		type = (type:gsub("^%l", string.upper))
 
-		-- TODO: limit the length of SOURCE and TYPE if needed for ImGui
-		gui_data[row].source = source
-		gui_data[row].type = type
-		gui_data[row].damage = { damage_entry.damage < 0, string.format("%.0f", damage_entry.damage) }
-		gui_data[row].hp = format_hp(damage_entry.hp)
-		gui_data[row].time = format_time(damage_entry.time)
+		List.pushright(gui_data, {
+			source = source,
+			type = type,
+			damage = { damage_entry.damage < 0, string.format("%.0f", damage_entry.damage) },
+			hp = format_hp(damage_entry.hp),
+			time = damage_entry.time, -- Formatted on display
+			id = damage_entry.id
+		})
+
+		log("update_gui_data: received damage: source=" .. source .. ", damage=" .. tostring(damage_entry.damage))
+	end
+
+	-- Clean up excessive entries
+	while List.length(gui_data) > MAX_DAMAGE_ENTRIES do
+		List.popleft(gui_data)
 	end
 end
 
-function OnModPreInit()
-	for i = 1, num_rows do
-		gui_data[i] = {}
-	end
-end
-
-local last_warning_time = -3
 function OnWorldPostUpdate()
+	if not initial_clear_completed then
+		-- Cleared for now to prevent serialization bugs to carry over between restarts.
+		-- This is called BEFORE OnWorldInitialized, where I initially tried to put it,
+		-- so while it sucks to check every single frame, I see no other option.
+		-- The OnMod*Init methods are called too early; GlobalSetValue isn't available yet.
+		-- TODO: If this is left out, the "time" column needs fixing!
+		-- TODO: Time is currently stored relative to the elapsed time since load, which of course
+		-- TODO: resets on load, so the times will be all wrong.
+		local empty_list = safe_serialize(List.new())
+		GlobalsSetValue("damagelog_damage_data", empty_list)
+		GlobalsSetValue("damagelog_highest_id_written", "0")
+		initial_clear_completed = true
+	end
+
 	if not imgui then
 		-- Not sure how else to handle this. Spam warnings often if imgui is not available, since the mod will be useless.
 		local current_time = GameGetRealWorldTimeSinceStarted()
-		if current_time - last_warning_time > 5 then
+		if current_time - last_imgui_warning_time > 5 then
 			GamePrint("damagelog: ImGui not available! Ensure NoitaDearImGui mod is installed, active, and ABOVE this mod in the mod list!")
-			last_warning_time = current_time
+			last_imgui_warning_time = current_time
 		end
 	end
 
@@ -226,9 +257,15 @@ function OnWorldPostUpdate()
 		display_gui = not display_gui
 	end
 
+	local highest_id_read = 0
+	if not List.isempty(gui_data) then
+		highest_id_read = List.peekright(gui_data).id
+	end
+
+	local highest_id_written = tonumber(GlobalsGetValue("damagelog_highest_id_written", "0"))
+
 	-- Recalculate at least once a second, since we need to update the time column
-	local latest_data_frame = tonumber(GlobalsGetValue("damagelog_latest_data_frame", "0"))
-	if latest_data_frame > latest_update_frame or (GameGetFrameNum() - latest_update_frame) >= 60 then
+	if highest_id_written > highest_id_read then
 		update_gui_data()
 	end
 
@@ -254,12 +291,4 @@ function OnPlayerSpawned(player_entity)
 		})
 		ComponentAddTag(lua_component, "damagelog_damage_luacomponent")
 	end
-
-	-- Cleared for now to prevent serialization bugs to carry over between restarts.
-	-- TODO: If this is left out (remains commented), the "time" column needs fixing!
-	-- TODO: Damage is currently stored relative to the elapsed time since load, which of course
-	-- TODO: resets on load, so the times will be all wrong.
-	-- local empty_list = safe_serialize(List.new())
-	-- lGlobalsSetValue("damagelog_damage_data", empty_list)
-
 end

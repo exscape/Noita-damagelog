@@ -71,6 +71,13 @@ function List.length (list)
 end
 
 --- Added by exscape
+function List.peekleft (list)
+  local first = list.first
+  if first > list.last then error("list is empty") end
+  return list[first]
+end
+
+--- Added by exscape
 function List.peekright (list)
   local last = list.last
   if list.first > last then error("list is empty") end
@@ -94,18 +101,26 @@ function safe_deserialize(s)
 	return smallfolk.loads((s:gsub([[@]], [["]])))
 end
 
-function store_damage_data(data)
+function store_damage_data(data, max_id)
 	local serialized = safe_serialize(data)
 	GlobalsSetValue("damagelog_damage_data", serialized)
-	GlobalsSetValue("damagelog_latest_data_frame", GameGetFrameNum())
-
-	return #serialized
+  GlobalsSetValue("damagelog_highest_id_written", tostring(max_id))
 end
 
 local empty_list = safe_serialize(List.new())
+
 function load_damage_data()
 	local data = GlobalsGetValue("damagelog_damage_data", empty_list)
-	return safe_deserialize(data)
+	local damage_data = safe_deserialize(data)
+
+  local max_id = 0
+  if not List.isempty(damage_data) then
+    max_id = List.peekright(damage_data).id
+  end
+
+  GlobalsSetValue("damagelog_highest_id_read", tostring(max_id))
+
+  return damage_data
 end
 
 return { ["List"] = List }

@@ -6,6 +6,7 @@ local additional_entities = dofile_once("mods/damagelog/files/additional_entitie
 
 local damage_data = List.new()
 local last_damage_entry = nil
+local hit_id = 1
 
 function get_entity_name(entity_id)
     if entity_id == 0 then
@@ -91,14 +92,15 @@ function get_player_health()
         return 0
     end
 
-	local damagemodels = EntityGetComponent( get_player_entity(), "DamageModelComponent" )
+	local damagemodels = EntityGetComponent(player, "DamageModelComponent")
 	local health = 0
 	if damagemodels ~= nil then
 		for _,v in ipairs(damagemodels) do
-			health = tonumber( ComponentGetValue( v, "hp" ) )
+			health = tonumber(ComponentGetValue( v, "hp"))
 			break
 		end
 	end
+
 	return health
 end
 
@@ -123,8 +125,7 @@ function should_pool_damage(source, message)
 
     -- Only one check remaining: whether the previous damage was recent enough.
     -- For fire (and some other effects like cursed area damage), recent enough means within a couple of frames.
-    -- For toxic sludge, poison and perhaps others, use a bit longer, since they only seem to fire about (exactly)?
-    -- once a second.
+    -- For toxic sludge, poison and perhaps others, use a bit longer, since they trigger less often.
     -- Fire uses more than 1-2 frames on purpose, so that if you're constantly getting set on fire and having it
     -- put out, we don't spam the log.
     local frame_diff = GameGetFrameNum() - prev.frame
@@ -160,33 +161,36 @@ function damage_received( damage, message, entity_thats_responsible, is_fatal, p
         log("damagelog WARNING: unknown message: " .. tostring(message))
     end
 
-    local damage_type = message
+    local damage_type = (message:gsub("^%l", string.upper))
     local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
     if hp_after < 0 then hp_after = 0 end -- Technically a bug? "The gods are very curious"
 
     -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
     -- if the last damage entry was from the same source *AND* it was recent.
-    local previous_damage = 0
+    local pooled_damage = 0
     if last_damage_entry ~= nil and should_pool_damage(source, message) then
-        previous_damage = last_damage_entry.damage
+        pooled_damage = last_damage_entry.damage
     end
 
     last_damage_entry = {
         source = source,
         type = damage_type,
-        damage = damage + previous_damage,
+        damage = damage + pooled_damage,
         hp = hp_after,
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
-        id = 1 + choice(last_damage_entry == nil, 0, 1)
+        id = hit_id
     }
 
-    List.pushright(damage_data, last_damage_entry)
-
-    -- TODO: 30 for testing!
-    while damage_data.last - damage_data.first >= 30 do
+    -- Clean up old entries from damage_data; i.e. entries that have already been received by the GUI code
+    local highest_read = tonumber(GlobalsGetValue("damagelog_highest_id_read", "0"))
+    while not List.isempty(damage_data)
+          and List.peekleft(damage_data).id <= highest_read do
         List.popleft(damage_data)
     end
 
-    store_damage_data(damage_data)
+    -- Store the data in the list and send it to the GUI
+    List.pushright(damage_data, last_damage_entry)
+    store_damage_data(damage_data, hit_id)
+    hit_id = hit_id + 1
 end
