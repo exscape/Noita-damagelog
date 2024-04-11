@@ -54,12 +54,14 @@ local max_rows_to_show = 10 -- TODO: implement this as a setting in the GUI
 local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
 local display_gui = display_gui_on_load
 
-function format_time(time)
+function format_time(time, lower_accuracy)
 	local current_time = GameGetRealWorldTimeSinceStarted()
-	local diff = current_time - time
+	local diff = math.floor(current_time - time)
 	if diff < 0 then
 		return "?"
-	elseif diff < 0.8 then
+	elseif (not lower_accuracy and diff < 1) or (lower_accuracy and diff < 3) then
+		-- lower_accuracy is used by e.g. toxic sludge stains, so that the time
+		-- doesn't keep jumping between now -> 1s -> 2s -> now -> ... while stained
 		return "now"
 	elseif diff < 60 then
 		return string.format("%.0fs", diff)
@@ -95,6 +97,39 @@ end
 		-- Format to exponent notation, and convert e.g. 1.3e+007 to 1.3e7
 		return (string.format("%.4g", n):gsub("e%+0*", "e"))
 	end
+end
+
+local function should_pool_damage(source, message)
+    -- TODO: expand with other sources
+    local sources_to_pool = {
+        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
+        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
+        ["Holy mountain"] = 1
+    }
+
+    if not sources_to_pool[source] then
+        return false
+    end
+
+    local prev = List.peekright(gui_data)
+
+    if prev.source ~= source or prev.type ~= message then
+        log("Not pooling: " .. prev.source .. " vs " .. source .. " and " .. prev.type .. " vs " .. message)
+        return false
+    end
+
+    -- Only one check remaining: whether the previous damage was recent enough.
+    -- For fire (and some other effects like cursed area damage), recent enough means within a couple of frames.
+    -- For toxic sludge, poison and perhaps others, use a bit longer, since they trigger less often.
+    -- Fire uses more than 1-2 frames on purpose, so that if you're constantly getting set on fire and having it
+    -- put out, we don't spam the log.
+    local frame_diff = GameGetFrameNum() - prev.frame
+
+    if source == "Fire" then
+        return frame_diff < 30
+    else
+        return frame_diff < 120
+    end
 end
 
 function draw_gui()
@@ -182,8 +217,15 @@ function draw_gui()
 		imgui.TableNextColumn()
 		imgui.Text(gui_data[row].hp)
 
+		-- So this is unfortunately very hacky.
+		-- To keep the GUI time updated in most cases while also not jumping back between
+		-- now -> 1s -> 2s -> now -> ... for some pooled damage, we need to use an exception
+		-- for such damage. There may be more exceptions than these that should be added.
+		-- TODO: ensure this works with non-English languages used in Noita
+		local s = gui_data[row].source
+		local lower_accuracy = s == "Toxic sludge" or s == "Poison"
 		imgui.TableNextColumn()
-		imgui.Text(format_time(gui_data[row].time))
+		imgui.Text(format_time(gui_data[row].time, lower_accuracy))
 	end
 
 	-- Add popup to right-clicking on any of the columns (except the header)
@@ -247,13 +289,24 @@ function update_gui_data()
 		local type = damage_entry.type
 		if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
 		if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+		type = (type:gsub("^%l", string.upper))
+
+		-- Pool damage from fast sources (like fire, once per frame = 60 times per second),
+		-- if the last damage entry was from the same source *AND* it was recent.
+		-- Note that this uses popright to remove the previous row entirely.
+		local pooled_damage = 0
+		if not List.isempty(gui_data) and should_pool_damage(source, type) then
+			pooled_damage = List.popright(gui_data).raw_damage
+		end
 
 		List.pushright(gui_data, {
 			source = source,
 			type = type,
-			damage = { damage_entry.damage < 0, format_number(damage_entry.damage) },
+			damage = { damage_entry.damage < 0, format_number(damage_entry.damage + pooled_damage) },
+			raw_damage = damage_entry.damage + pooled_damage,
 			hp = format_number(damage_entry.hp),
 			time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
+			frame = damage_entry.frame,
 			id = damage_entry.id
 		})
 	end

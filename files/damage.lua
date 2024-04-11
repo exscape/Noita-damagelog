@@ -68,39 +68,6 @@ local function get_player_health()
     return tonumber(ComponentGetValue(damagemodels[1], "hp"))
 end
 
-local function should_pool_damage(source, message)
-    -- TODO: expand with other sources
-    local sources_to_pool = {
-        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
-        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
-        ["Holy mountain"] = 1
-    }
-
-    if not sources_to_pool[source] or List.isempty(damage_data) then
-        return false
-    end
-
-    local prev = List.peekright(damage_data)
-
-    if prev.source ~= source or prev.type ~= message then
-        -- log("Not pooling: " .. prev.source .. " vs " .. source .. " and " .. prev.type .. " vs " .. message)
-        return false
-    end
-
-    -- Only one check remaining: whether the previous damage was recent enough.
-    -- For fire (and some other effects like cursed area damage), recent enough means within a couple of frames.
-    -- For toxic sludge, poison and perhaps others, use a bit longer, since they trigger less often.
-    -- Fire uses more than 1-2 frames on purpose, so that if you're constantly getting set on fire and having it
-    -- put out, we don't spam the log.
-    local frame_diff = GameGetFrameNum() - prev.frame
-
-    if source == "Fire" then
-        return frame_diff < 30
-    else
-        return frame_diff < 120
-    end
-end
-
 local function damage_source_from_message_only(type)
     -- Most of these will probably never trigger as the entity will be displayed instead of
     -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
@@ -157,13 +124,6 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         hp_after = math.floor(hp_after)
     end
 
-    -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
-    -- if the last damage entry was from the same source *AND* it was recent.
-    local pooled_damage = 0
-    if not List.isempty(damage_data) and should_pool_damage(source, message) then
-        pooled_damage = List.peekright(damage_data).damage
-    end
-
     -- Clean up old entries from damage_data; i.e. entries that have already been received by the GUI code
     local highest_read = tonumber(GlobalsGetValue("damagelog_highest_id_read", "0"))
     while not List.isempty(damage_data)
@@ -175,7 +135,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     List.pushright(damage_data, {
         source = source,
         type = damage_type,
-        damage = damage + pooled_damage,
+        damage = damage,
         hp = hp_after,
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
