@@ -46,6 +46,7 @@ local player_spawn_time = 0
 -- Will be removed/reworked to be persistent.
 local max_damage_entries = 200 -- TODO: what's a reasonable limit?
 local auto_size_columns = true
+local show_on_pause_screen = true
 local font = 1
 local alternate_row_colors = false
 local show_grid_lines = true
@@ -305,6 +306,7 @@ function draw_gui()
 		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
 		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
 
+		_, show_on_pause_screen = imgui.Checkbox("Show log on pause screen", show_on_pause_screen)
 		_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
 		_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
 
@@ -371,21 +373,7 @@ function update_gui_data()
 	end
 end
 
-function OnWorldPostUpdate()
-	if not initial_clear_completed then
-		-- Cleared for now to prevent serialization bugs to carry over between restarts.
-		-- This is called BEFORE OnWorldInitialized, where I initially tried to put it,
-		-- so while it sucks to check every single frame, I see no other option.
-		-- The OnMod*Init methods are called too early; GlobalSetValue isn't available yet.
-		-- TODO: If this is left out, the "time" column needs fixing!
-		-- TODO: Time is currently stored relative to the elapsed time since load, which of course
-		-- TODO: resets on load, so the times will be all wrong.
-		local empty_list = safe_serialize(List.new())
-		GlobalsSetValue("damagelog_damage_data", empty_list)
-		GlobalsSetValue("damagelog_highest_id_written", "0")
-		initial_clear_completed = true
-	end
-
+function handle_input_and_gui()
 	if not imgui then
 		-- Not sure how else to handle this. Spam warnings often if imgui is not available, since the mod will be useless.
 		local current_time = GameGetRealWorldTimeSinceStarted()
@@ -413,6 +401,30 @@ function OnWorldPostUpdate()
 	end
 
 	draw_gui()
+end
+
+function OnPausePreUpdate()
+	if show_on_pause_screen then
+		handle_input_and_gui()
+	end
+end
+
+function OnWorldPostUpdate()
+	if not initial_clear_completed then
+		-- Cleared for now to prevent serialization bugs to carry over between restarts.
+		-- This is called BEFORE OnWorldInitialized, where I initially tried to put it,
+		-- so while it sucks to check every single frame, I see no other option.
+		-- The OnMod*Init methods are called too early; GlobalSetValue isn't available yet.
+		-- TODO: If this is left out, the "time" column needs fixing!
+		-- TODO: Time is currently stored relative to the elapsed time since load, which of course
+		-- TODO: resets on load, so the times will be all wrong.
+		local empty_list = safe_serialize(List.new())
+		GlobalsSetValue("damagelog_damage_data", empty_list)
+		GlobalsSetValue("damagelog_highest_id_written", "0")
+		initial_clear_completed = true
+	end
+
+	handle_input_and_gui()
 end
 
 -- Called by Noita when the player spawns. Must have this name.
