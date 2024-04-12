@@ -37,24 +37,70 @@ local List = Utils.List
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 local gui_data = List.new()
 
+-- TEMPORARY settings
+-- TODO: rework these also and show them in the GUI
+ -- TODO: what's a reasonable limit?
+ -- WITHOUT SCROLLING this can be removed, max_rows_to_show should be used instead.
+ -- No point in storing data that can never be shown.
+local max_damage_entries = 200
+
+local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
+local display_gui = display_gui_on_load
+
 -- State that can't be affected by the player
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
 
--- TEMPORARY settings, reset on restart
--- Will be removed/reworked to be persistent.
-local max_damage_entries = 200 -- TODO: what's a reasonable limit?
-local auto_size_columns = true
-local show_on_pause_screen = true
-local font = 1
-local alternate_row_colors = false
-local show_grid_lines = true
-local foreground_opacity = 0.7
-local background_opacity = 0.1
-local max_rows_to_show = 10 -- TODO: implement this as a setting in the GUI
-local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
-local display_gui = display_gui_on_load
+-- Initialized in load_settings, called on mod initialization.
+-- Read from and written to using get_setting and set_setting, respectively.
+local _settings = {}
+
+local function load_settings()
+    local default_settings = {
+        auto_size_columns = true,
+        show_on_pause_screen = true,
+        font = 1,
+        max_rows_to_show = 15,
+        show_grid_lines = true,
+        alternate_row_colors = false,
+        foreground_opacity = 0.7,
+        background_opacity = 0.3,
+    }
+
+    for key, default_value in pairs(default_settings) do
+        local stored_value = ModSettingGet("damagelog." .. key)
+        if stored_value == nil then
+            _settings[key] = default_value
+            log("Used default value " .. tostring(default_value) .. " for " .. key)
+        else
+            _settings[key] = stored_value
+            log("Loaded stored value " .. tostring(stored_value) .. " for " .. key)
+        end
+    end
+end
+
+local function get_setting(key)
+    -- If this ever fails, I've screwed up, not the user -- so no error checking, let it fail and print an error
+    return _settings[key]
+end
+
+local function set_setting(key, value)
+    _settings[key] = value
+    ModSettingSet("damagelog." .. key, value)
+end
+
+-- A bit overly involved, but this way we can get automatic calls to get_setting and set_setting
+-- with only specifying the setting key (once), which would be much messier if we needed to
+-- check the imgui.* return value for every setting individually.
+local function create_widget(setting_name, widget_creator)
+    return function(label, ...)
+        local did_change, new_value = widget_creator(label, get_setting(setting_name), ...)
+        if did_change then
+            set_setting(setting_name, new_value)
+        end
+    end
+end
 
 local fonts = {
 	{"Noita Pixel", imgui.GetNoitaFont()},
@@ -149,6 +195,7 @@ function draw_gui()
 
 	-- These are pushed initially, then popped to not affect the popup windows.
 	local function push_main_window_vars()
+		local foreground_opacity = get_setting("foreground_opacity")
 		local accent_main = {0.58, 0.50, 0.39, foreground_opacity}
 		local accent_light = {0.70, 0.62, 0.51, foreground_opacity}
 
@@ -168,9 +215,14 @@ function draw_gui()
 		imgui.PopStyleColor(6)
 	end
 
+    -- These are used multiple times below
+    local auto_size_columns = get_setting("auto_size_columns")
+    local font = get_setting("font")
+    local max_rows_to_show = get_setting("max_rows_to_show")
+
 	push_main_window_vars()
 	imgui.PushFont(fonts[font][2])
-	imgui.SetNextWindowBgAlpha(background_opacity)
+	imgui.SetNextWindowBgAlpha(get_setting("background_opacity"))
 
 	local window_flags = imgui.WindowFlags.AlwaysAutoResize
 	window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
@@ -193,8 +245,8 @@ function draw_gui()
 		imgui.TableFlags.Hideable,
 		imgui.TableFlags.BordersOuter,
 		choice(not auto_size_columns, imgui.TableFlags.Resizable, 0),
-		choice(alternate_row_colors, imgui.TableFlags.RowBg, 0),
-		choice(show_grid_lines, imgui.TableFlags.BordersInner, 0)
+		choice(get_setting("alternate_row_colors"), imgui.TableFlags.RowBg, 0),
+		choice(get_setting("show_grid_lines"), imgui.TableFlags.BordersInner, 0)
 	)
 
 	imgui.BeginTable("Damage", 5, table_flags)
@@ -204,7 +256,7 @@ function draw_gui()
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 10, 8)
 	end
 
-	imgui.PushStyleColor(imgui.Col.TableHeaderBg, 0.45, 0.45, 0.45, foreground_opacity)
+	imgui.PushStyleColor(imgui.Col.TableHeaderBg, 0.45, 0.45, 0.45, get_setting("foreground_opacity"))
 	imgui.TableSetupColumn("Source")
 	imgui.TableSetupColumn("Type")
 	imgui.TableSetupColumn("Damage")
@@ -217,6 +269,9 @@ function draw_gui()
 		imgui.PopStyleVar()
 	end
 
+    -- Show "Hitless" if there are no hits registered yet
+    -- The for loop won't run in this case, so we don't need to move all of that
+    -- inside an else clause.
 	if List.length(gui_data) == 0 then
 		imgui.TableNextRow()
 
@@ -290,10 +345,21 @@ function draw_gui()
 	if imgui.BeginPopup("SettingsPopup") then
 		imgui.Text("Settings are applied and saved immediately.")
 
-		if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
-		if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
+        ---------------- Start of settings ----------------
 
-		_, font = imgui.Combo("Font", font, {
+        -- These follow a different pattern than the others, so create_widget isn't used
+        if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then
+            set_setting("auto_size_columns", true)
+        end
+        if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then
+            set_setting("auto_size_columns", false)
+        end
+
+        local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox)
+        show_on_pause_screen_creator("Show log on pause screen")
+
+        local font_callback = create_widget("font", imgui.Combo)
+        font_callback("Font", {
 			"Noita Pixel",
 			"Noita Pixel 1.4x",
 			"Noita Pixel 1.8x",
@@ -301,18 +367,42 @@ function draw_gui()
 			"Source Code Pro"
 		})
 
-		_, max_rows_to_show = imgui.SliderInt("Max rows to show", max_rows_to_show, 1, 60)
+        local max_rows_to_show_creator = create_widget("max_rows_to_show", imgui.SliderInt)
+        max_rows_to_show_creator("Max rows to show", 1, 60)
 
-		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
-		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
+        local show_grid_lines_creator = create_widget("show_grid_lines", imgui.Checkbox)
+        show_grid_lines_creator("Show grid lines")
 
-		_, show_on_pause_screen = imgui.Checkbox("Show log on pause screen", show_on_pause_screen)
-		_, alternate_row_colors = imgui.Checkbox("Alternate row colors", alternate_row_colors)
-		_, show_grid_lines = imgui.Checkbox("Show grid lines", show_grid_lines)
+        local alternate_row_colors_creator = create_widget("alternate_row_colors", imgui.Checkbox)
+        alternate_row_colors_creator("Alternate row colors")
+
+        local foreground_opacity_creator = create_widget("foreground_opacity", imgui.SliderFloat)
+        foreground_opacity_creator("Foreground opacity (text etc)", 0.1, 1.0)
+
+        local background_opacity_creator = create_widget("background_opacity", imgui.SliderFloat)
+        background_opacity_creator("Background opacity", 0.0, 1.0)
+
+        ---------------- End of settings ----------------
 
 		if imgui.Button("Close") then
 			imgui.CloseCurrentPopup()
 		end
+        imgui.SameLine()
+        if imgui.Button("Help") then
+            imgui.OpenPopup("HelpPopup")
+        end
+
+        if imgui.Button("Reset window position") then
+            imgui.SetWindowPos("Damage log", 0, 0)
+        end
+
+        if imgui.BeginPopup("HelpPopup") then
+            imgui.TextUnformatted("Long text explaining stuff.\nDon't eat the yellow snow, and so on.")
+            if imgui.Button("Close") then
+                imgui.CloseCurrentPopup()
+            end
+            imgui.EndPopup() -- HelpPopup
+        end
 		imgui.EndPopup() -- SettingsPopup
 	end
 	imgui.PopID()
@@ -403,8 +493,12 @@ function handle_input_and_gui()
 	draw_gui()
 end
 
+function OnModInit()
+    load_settings()
+end
+
 function OnPausePreUpdate()
-	if show_on_pause_screen then
+	if get_setting("show_on_pause_screen") then
 		handle_input_and_gui()
 	end
 end
