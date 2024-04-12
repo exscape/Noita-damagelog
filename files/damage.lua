@@ -46,12 +46,12 @@ local function get_entity_name(entity_id)
 end
 
 local function get_player_entity()
-	local players = EntityGetWithTag("player_unit")
-	if #players == 0 then
+    local players = EntityGetWithTag("player_unit")
+    if #players == 0 then
         return nil
     end
 
-	return players[1]
+    return players[1]
 end
 
 local function get_player_health()
@@ -60,8 +60,8 @@ local function get_player_health()
         return 0
     end
 
-	local damagemodels = EntityGetComponent(player, "DamageModelComponent")
-	if damagemodels == nil or #damagemodels < 1 then
+    local damagemodels = EntityGetComponent(player, "DamageModelComponent")
+    if damagemodels == nil or #damagemodels < 1 then
         return 0
     end
 
