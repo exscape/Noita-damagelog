@@ -2,7 +2,14 @@
     "Lua.diagnostics.globals": [
         "current_frame",
         "GameGetRealWorldTimeSinceStarted",
-        "bit"
+        "bit",
+        "Key_a",
+        "Key_LCTRL",
+        "Key_LSHIFT",
+        "Key_LALT",
+        "Key_RCTRL",
+        "Key_RSHIFT",
+        "Key_RALT"
     ],
     "Lua.completion.autoRequire": false,
     "Lua.diagnostics.disable": [
