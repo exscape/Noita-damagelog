@@ -227,6 +227,9 @@ function draw_gui()
     local font = get_setting("font")
     local max_rows_to_show = get_setting("max_rows_to_show")
 
+    -- Used while drawing the settings
+    local spacing_size = 0.5 -- * FontSize
+
     push_main_window_vars()
     imgui.PushFont(fonts[font][2])
     imgui.SetNextWindowBgAlpha(get_setting("background_opacity"))
@@ -352,21 +355,25 @@ function draw_gui()
     if imgui.BeginPopup("SettingsPopup") then
         imgui.Text("Settings are applied and saved immediately.")
 
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
         ---------------- Start of settings ----------------
 
         -- These follow a different pattern than the others, so create_widget isn't used
         if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then
             set_setting("auto_size_columns", true)
         end
-        if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then
+        if imgui.RadioButton("Manual sizing (click divider + drag).", not auto_size_columns) then
             set_setting("auto_size_columns", false)
         end
 
         local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox)
         show_on_pause_screen_creator("Show log on pause screen")
 
-        local font_callback = create_widget("font", imgui.Combo)
-        font_callback("Font", {
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
+        local font_creator = create_widget("font", imgui.Combo)
+        font_creator("Font", {
             "Noita Pixel",
             "Noita Pixel 1.4x",
             "Noita Pixel 1.8x",
@@ -388,6 +395,8 @@ function draw_gui()
 
         local background_opacity_creator = create_widget("background_opacity", imgui.SliderFloat)
         background_opacity_creator("Background opacity", 0.0, 1.0)
+
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         ---------------- End of settings ----------------
 
