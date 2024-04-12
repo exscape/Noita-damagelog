@@ -57,7 +57,8 @@ local display_gui = display_gui_on_load
 
 local fonts = {
 	{"Noita Pixel", imgui.GetNoitaFont()},
-	{"Noita Pixel x1.4", imgui.GetNoitaFont1_4x()},
+	{"Noita Pixel 1.4x", imgui.GetNoitaFont1_4x()},
+	{"Noita Pixel 1.8x", imgui.GetNoitaFont1_8x()},
 	{"ImGui (Proggy Clean)", imgui.GetImGuiFont()},
 	{"Source Code Pro", imgui.GetMonospaceFont()},
 }
@@ -145,27 +146,42 @@ function draw_gui()
 		return
 	end
 
-	local window_flags = imgui.WindowFlags.AlwaysAutoResize
---	imgui.PushStyleColor(imgui.Col.WindowBg, 0, 0, 0, background_opacity)
+	-- These are pushed initially, then popped to not affect the popup windows.
+	local function push_main_window_vars()
+		local accent_main = {0.58, 0.50, 0.39, foreground_opacity}
+		local accent_light = {0.70, 0.62, 0.51, foreground_opacity}
 
+		imgui.PushStyleColor(imgui.Col.TitleBg, unpack(accent_main))
+		imgui.PushStyleColor(imgui.Col.TitleBgActive, unpack(accent_light))
+		imgui.PushStyleColor(imgui.Col.Border, unpack(accent_main))
+		imgui.PushStyleColor(imgui.Col.Text, 1, 1, 1, foreground_opacity)
+
+		imgui.PushStyleColor(imgui.Col.TableBorderLight, 0.4, 0.4, 0.4, foreground_opacity)
+		imgui.PushStyleColor(imgui.Col.TableBorderStrong, 0.55, 0.55, 0.55, foreground_opacity)
+
+		imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 0, 0)
+	end
+
+	local function pop_main_window_vars()
+		imgui.PopStyleVar()
+		imgui.PopStyleColor(6)
+	end
+
+	push_main_window_vars()
 	imgui.PushFont(fonts[font][2])
 	imgui.SetNextWindowBgAlpha(background_opacity)
-	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 0, 0)
-	imgui.PushStyleColor(imgui.Col.Text, 1, 1, 1, foreground_opacity)
 
-	-- if window_status_changed and not display_gui and ... first time closing ...
-	-- show help
+	local window_flags = imgui.WindowFlags.AlwaysAutoResize
 	window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
 
 	if not window_shown then
 		-- Window is collapsed
-		imgui.PopStyleVar()
-		imgui.PopStyleColor()
+		pop_main_window_vars()
 		return
 	end
 
-	if font == 2 then
-		-- 1.4x font needs more padding to look right
+	if font == 2 or font == 3 then
+		-- These larger fonts need more padding to look right
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 10, 6)
 	else
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 7, 3)
@@ -183,18 +199,20 @@ function draw_gui()
 	imgui.BeginTable("Damage", 5, table_flags)
 
 	-- Column setup + headers
-	if font == 2 then
+	if font == 2 or font == 3 then
 		imgui.PushStyleVar(imgui.StyleVar.CellPadding, 10, 8)
 	end
 
+	imgui.PushStyleColor(imgui.Col.TableHeaderBg, 0.45, 0.45, 0.45, foreground_opacity)
 	imgui.TableSetupColumn("Source")
 	imgui.TableSetupColumn("Type")
 	imgui.TableSetupColumn("Damage")
 	imgui.TableSetupColumn("HP")
 	imgui.TableSetupColumn("Time")
 	imgui.TableHeadersRow()
+	imgui.PopStyleColor()
 
-	if font == 2 then
+	if font == 2 or font == 3 then
 		imgui.PopStyleVar()
 	end
 
@@ -260,21 +278,30 @@ function draw_gui()
 		end
 	end
 
+	pop_main_window_vars()
+	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 8, 8)
+
 	imgui.PushID("123")
 	if is_any_column_hovered and not imgui.IsAnyItemHovered() and imgui.IsMouseReleased(1) then
 		imgui.OpenPopup("SettingsPopup")
 	end
 
-	imgui.PushStyleVar(imgui.StyleVar.WindowPadding, 6, 6)
 	if imgui.BeginPopup("SettingsPopup") then
 		imgui.Text("Settings are applied and saved immediately.")
 
 		if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then auto_size_columns = true end
 		if imgui.RadioButton("Manual sizing (click divider + drag). Will remember the user-set sizes.", not auto_size_columns) then auto_size_columns = false end
 
-		_, font = imgui.Combo("Font", font, {"Noita Pixel", "Noita Pixel 1.4x", "ImGui (Proggy Clean)", "Source Code Pro"})
+		_, font = imgui.Combo("Font", font, {
+			"Noita Pixel",
+			"Noita Pixel 1.4x",
+			"Noita Pixel 1.8x",
+			"ImGui (Proggy Clean)",
+			"Source Code Pro"
+		})
 
 		_, max_rows_to_show = imgui.SliderInt("Max rows to show", max_rows_to_show, 1, 30)
+
 		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
 		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
 
@@ -285,15 +312,13 @@ function draw_gui()
 			imgui.CloseCurrentPopup()
 		end
 		imgui.EndPopup() -- SettingsPopup
-		imgui.PopStyleVar()
 	end
 	imgui.PopID()
+	imgui.PopStyleVar()
 
 	imgui.EndTable()
 	imgui.PopStyleVar()
 	imgui.End() -- Damage log window
-	imgui.PopStyleColor()
-	imgui.PopStyleVar()
 	imgui.PopFont()
 end
 
