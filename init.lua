@@ -1,6 +1,7 @@
 local imgui = load_imgui({version="1.17.0", mod="damagelog"})
 local Utils = dofile_once("mods/damagelog/files/utils.lua")
 local List = Utils.List
+dofile_once('data/scripts/debug/keycodes.lua')
 
 --[[
     Here's a basic overview of how the mod works, for my future self, and others interested.
@@ -65,6 +66,10 @@ local _default_settings = {
     alternate_row_colors = false,
     foreground_opacity = 0.7,
     background_opacity = 0.3,
+    activation_ctrl = true,
+    activation_shift = false,
+    activation_alt = false,
+    activation_key = 5, -- 5th in the array = 'E'
 }
 
 local function load_settings()
@@ -398,6 +403,30 @@ function draw_gui()
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
+        imgui.Text("Activation hotkey")
+        imgui.SameLine()
+        local activation_ctrl_creator = create_widget("activation_ctrl", imgui.Checkbox)
+        activation_ctrl_creator("Ctrl")
+        imgui.SameLine()
+        local activation_alt_creator = create_widget("activation_alt", imgui.Checkbox)
+        activation_alt_creator("Alt")
+        imgui.SameLine()
+        local activation_shift_creator = create_widget("activation_shift", imgui.Checkbox)
+        activation_shift_creator("Shift")
+        imgui.SameLine()
+
+        -- These are in the same order as in data/scripts/debug/keycodes.lua, which is also why some other
+        -- potentially useful keys are not listed
+        local allowed_keys = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+            'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
+
+        imgui.PushItemWidth(imgui.GetFontSize() * 3)
+        local key_creator = create_widget("activation_key", imgui.Combo)
+        key_creator("", allowed_keys)
+        imgui.PopItemWidth()
+
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
         ---------------- End of settings ----------------
 
         if imgui.Button("Close") then
@@ -493,6 +522,26 @@ function update_gui_data()
     end
 end
 
+local function activation_hotkey_was_just_pressed()
+    -- NOTE: This requires Noita beta OR a newer build.
+    -- As of this writing (2024-04-08) the main branch was updated to have these methods *today*.
+    -- If modifier keys are used, this requires the non-modifier key to be pressed last -- as you're used to.
+
+    local use_ctrl = get_setting("activation_ctrl")
+    local use_shift = get_setting("activation_shift")
+    local use_alt = get_setting("activation_alt")
+
+    -- So we have the activation_key setting, which is 1 for 'A', ... 26 for 'Z', 27 for '1', ... ending in '9', '0'
+    -- We need to convert that to the index used by Noita, which is 4 for 'A', and so on, in the same order.
+    local key = get_setting("activation_key") + Key_a - 1
+
+    return
+        (not use_ctrl or InputIsKeyDown(Key_LCTRL) or InputIsKeyDown(Key_RCTRL)) and
+        (not use_shift or InputIsKeyDown(Key_LSHIFT) or InputIsKeyDown(Key_RSHIFT)) and
+        (not use_alt or InputIsKeyDown(Key_LALT) or InputIsKeyDown(Key_RALT)) and
+        InputIsKeyJustDown(key)
+end
+
 function handle_input_and_gui()
     if not imgui then
         -- Not sure how else to handle this. Spam warnings often if imgui is not available, since the mod will be useless.
@@ -503,10 +552,7 @@ function handle_input_and_gui()
         end
     end
 
-    -- NOTE: This requires Noita beta OR a newer build.
-    -- As of this writing (2024-04-08) the main branch was updated to have these methods *today*.
-    -- Default keys are Left Control + E
-    if InputIsKeyDown(224) and InputIsKeyJustDown(8) then
+    if activation_hotkey_was_just_pressed() then
         display_gui = not display_gui
     end
 
