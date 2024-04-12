@@ -56,19 +56,19 @@ local player_spawn_time = 0
 -- Read from and written to using get_setting and set_setting, respectively.
 local _settings = {}
 
-local function load_settings()
-    local default_settings = {
-        auto_size_columns = true,
-        show_on_pause_screen = true,
-        font = 1,
-        max_rows_to_show = 15,
-        show_grid_lines = true,
-        alternate_row_colors = false,
-        foreground_opacity = 0.7,
-        background_opacity = 0.3,
-    }
+local _default_settings = {
+    auto_size_columns = true,
+    show_on_pause_screen = true,
+    font = 1,
+    max_rows_to_show = 15,
+    show_grid_lines = true,
+    alternate_row_colors = false,
+    foreground_opacity = 0.7,
+    background_opacity = 0.3,
+}
 
-    for key, default_value in pairs(default_settings) do
+local function load_settings()
+    for key, default_value in pairs(_default_settings) do
         local stored_value = ModSettingGet("damagelog." .. key)
         if stored_value == nil then
             _settings[key] = default_value
@@ -77,6 +77,13 @@ local function load_settings()
             _settings[key] = stored_value
             log("Loaded stored value " .. tostring(stored_value) .. " for " .. key)
         end
+    end
+end
+
+local function reset_settings()
+    for key, default_value in pairs(_default_settings) do
+        ModSettingRemove("damagelog." .. key)
+        _settings[key] = default_value
     end
 end
 
@@ -392,8 +399,22 @@ function draw_gui()
             imgui.OpenPopup("HelpPopup")
         end
 
-        if imgui.Button("Reset window position") then
-            imgui.SetWindowPos("Damage log", 0, 0)
+        if imgui.Button("Restore default settings") then
+            imgui.OpenPopup("ConfirmRestorePopup")
+        end
+
+        if imgui.BeginPopup("ConfirmRestorePopup") then
+            imgui.Text("Are you sure you want to restore the default settings?")
+
+            if imgui.Button("Yes, restore defaults") then
+                reset_settings()
+                imgui.CloseCurrentPopup()
+            end
+            imgui.SameLine()
+            if imgui.Button("No, abort") then
+                imgui.CloseCurrentPopup()
+            end
+            imgui.EndPopup() -- ConfirmRestorePopup
         end
 
         if imgui.BeginPopup("HelpPopup") then
