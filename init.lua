@@ -300,7 +300,7 @@ function draw_gui()
 			"Source Code Pro"
 		})
 
-		_, max_rows_to_show = imgui.SliderInt("Max rows to show", max_rows_to_show, 1, 30)
+		_, max_rows_to_show = imgui.SliderInt("Max rows to show", max_rows_to_show, 1, 60)
 
 		_, foreground_opacity = imgui.SliderFloat("Foreground opacity (text etc)", foreground_opacity, 0.1, 1.0)
 		_, background_opacity = imgui.SliderFloat("Background opacity", background_opacity, 0.0, 1.0)
@@ -314,10 +314,10 @@ function draw_gui()
 		imgui.EndPopup() -- SettingsPopup
 	end
 	imgui.PopID()
-	imgui.PopStyleVar()
+	imgui.PopStyleVar() -- WindowPadding for SettingsPopup
 
 	imgui.EndTable()
-	imgui.PopStyleVar()
+	imgui.PopStyleVar() -- CellPadding for the table
 	imgui.End() -- Damage log window
 	imgui.PopFont()
 end
