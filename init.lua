@@ -208,9 +208,9 @@ end
 function draw_help_window()
     if not imgui or GameIsInventoryOpen() then return end
 
+    local spacing_size = 0.5 -- * FontSize
     local font = get_setting("font")
     imgui.PushFont(fonts[font][2])
-    local spacing_size = 0.5 -- * FontSize
 
     imgui.SetNextWindowPos(220, 330, imgui.Cond.Once)
 
@@ -221,12 +221,14 @@ function draw_help_window()
     -- that means the user just closed the window and Begin returned _, false.
     if not should_show then
         imgui.PopFont()
+        imgui.End() -- Hmm, why is this needed here, but not in draw_gui()?
         set_setting("show_help_window", false)
         return
     end
 
     if not window_shown then
         -- Window is collapsed
+        imgui.PopFont()
         return
     end
 
@@ -247,7 +249,7 @@ function draw_help_window()
         set_setting("show_help_window", false)
     end
 
-    imgui.End() -- Damage log window
+    imgui.End()
     imgui.PopFont()
 end
 
@@ -255,6 +257,11 @@ function draw_gui()
     if not display_gui or not imgui or GameIsInventoryOpen() then
         return
     end
+
+    -- These are used multiple times below
+    local auto_size_columns = get_setting("auto_size_columns")
+    local font = get_setting("font")
+    local max_rows_to_show = get_setting("max_rows_to_show")
 
     -- These are pushed initially, then popped to not affect the popup windows.
     local function push_main_window_vars()
@@ -285,11 +292,6 @@ function draw_gui()
         imgui.PopStyleColor(6)
     end
 
-    -- These are used multiple times below
-    local auto_size_columns = get_setting("auto_size_columns")
-    local font = get_setting("font")
-    local max_rows_to_show = get_setting("max_rows_to_show")
-
     -- Used while drawing the settings
     local spacing_size = 0.5 -- * FontSize
 
@@ -312,6 +314,7 @@ function draw_gui()
     if not window_shown then
         -- Window is collapsed
         pop_main_window_vars()
+        imgui.PopFont()
         return
     end
 
@@ -490,7 +493,7 @@ function draw_gui()
 
         imgui.PushItemWidth(imgui.GetFontSize() * 3)
         local key_creator = create_widget("activation_key", imgui.Combo)
-        key_creator("", allowed_keys)
+        key_creator("##Key", allowed_keys)
         imgui.PopItemWidth()
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
