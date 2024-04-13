@@ -15,6 +15,17 @@ mod_settings =
         ui_description = "Preferences",
         settings = {
             {
+                id = "ignore_mouse_input",
+                ui_name = "Click-through / ignore all(!) mouse input",
+                ui_description = "ALL mouse input is ignored and sent to Noita instead,\n" ..
+                    "including right-clicks, window moves, etc.\n" ..
+                    "Must be disabled here again to allow setting changes.\n\n" ..
+                    "Nice to have if you want the window always visible,\n" ..
+                    "to avoid accidental clicks when attacking.",
+                value_default = false,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
                 id = "reset_settings_now",
                 ui_name = "Restore default mod settings (once)",
                 ui_description = "Emergency fix in case you can't access the damage log in-game for any reason.",
@@ -28,10 +39,10 @@ mod_settings =
             {
                 ui_fn = ui_show_text,
                 ui_name = "Please note",
-                ui_description = "    Settings for this mod are accessed by right-clicking\n" ..
+                ui_description = "    Other settings for this mod are accessed by right-clicking\n" ..
                                  "    in any non-header row in the log in-game.\n" ..
-                                 "    If you can't access the log for whatever reason, enable the\n" ..
-                                 "    setting above and go back into the game, and it should show up.",
+                                 "    If you can't access the log for whatever reason, restore the\n" ..
+                                 "    settings above and go back into the game, and it should show up.",
                 not_setting = true,
             },
         },

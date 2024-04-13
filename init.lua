@@ -67,6 +67,7 @@ local _default_settings = {
     alternate_row_colors = false,
     foreground_opacity = 0.7,
     background_opacity = 0.3,
+    ignore_mouse_input = false,
     activation_ctrl = true,
     activation_shift = false,
     activation_alt = false,
@@ -223,7 +224,14 @@ function draw_gui()
         local accent_light = {0.70, 0.62, 0.51, foreground_opacity}
 
         imgui.PushStyleColor(imgui.Col.TitleBg, unpack(accent_main))
-        imgui.PushStyleColor(imgui.Col.TitleBgActive, unpack(accent_light))
+
+        if get_setting("ignore_mouse_input") then
+            -- Window is still highlighted when clicked, which is ugly, so hide that
+            imgui.PushStyleColor(imgui.Col.TitleBgActive, unpack(accent_main))
+        else
+            imgui.PushStyleColor(imgui.Col.TitleBgActive, unpack(accent_light))
+        end
+
         imgui.PushStyleColor(imgui.Col.Border, unpack(accent_main))
         imgui.PushStyleColor(imgui.Col.Text, 1, 1, 1, foreground_opacity)
 
@@ -256,6 +264,10 @@ function draw_gui()
     end
 
     local window_flags = imgui.WindowFlags.AlwaysAutoResize
+    if get_setting("ignore_mouse_input") then
+        window_flags = bit.bor(window_flags, imgui.WindowFlags.NoMouseInputs)
+    end
+
     window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
 
     if not window_shown then
@@ -442,6 +454,11 @@ function draw_gui()
         key_creator("", allowed_keys)
         imgui.PopItemWidth()
 
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
+        imgui.Text([[Mouse click-through can be enabled in Noita's "Mod Settings" menu.]])
+        imgui.Text([[When enabled, accessing this window is impossible,]])
+        imgui.Text([[so it must be disabled again to change other settings.]])
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         ---------------- End of settings ----------------
