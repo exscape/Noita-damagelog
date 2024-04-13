@@ -99,11 +99,18 @@ local function load_settings()
 end
 
 local function get_setting(key)
-    -- If this ever fails, I've screwed up, not the user -- so no error checking, let it fail and print an error
-    return _settings[key]
+    local value = _settings[key]
+    if value == nil then
+        error("Invalid setting key: " .. key)
+    end
+
+    return value
 end
 
 local function set_setting(key, value)
+    if _default_settings[key] == nil then
+        error("Invalid setting key: " .. key)
+    end
     _settings[key] = value
     ModSettingSet("damagelog." .. key, value)
 end
