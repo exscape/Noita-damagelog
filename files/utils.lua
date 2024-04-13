@@ -15,7 +15,7 @@ end
 
 function log(s)
     print("!!! damagelog !!! " .. tostring(s))
-    GamePrint("!!! " .. tostring(s))
+    GamePrint("damagelog: " .. tostring(s))
 end
 
 -- Roughly equivalent to the ternary operator.
@@ -92,7 +92,7 @@ function safe_serialize(s)
     local serialized = smallfolk.dumps(s)
     if serialized:find("@") then
         serialized:gsub("@", "")
-        log("damagelog Warning: removed @ from string, may cause bugs")
+        log("Warning: removed @ from string, may cause bugs")
     end
     return (serialized:gsub([["]], [[@]]))
 end

@@ -82,7 +82,7 @@ local function reset_settings()
     end
 
     reset_window_settings = true
-    log("damagelog: Mod settings cleared!")
+    log("Mod settings cleared!")
 end
 
 local function load_settings()
@@ -90,13 +90,10 @@ local function load_settings()
         local stored_value = ModSettingGet("damagelog." .. key)
         if stored_value == nil then
             _settings[key] = default_value
-            log("Used default value " .. tostring(default_value) .. " for " .. key)
         else
             _settings[key] = stored_value
-            log("Loaded stored value " .. tostring(stored_value) .. " for " .. key)
 
             if key == 'reset_settings_now' and stored_value then
-                log("reset_settings_now was set, calling reset_settings()")
                 reset_settings()
                 return
             end
@@ -194,7 +191,6 @@ local function should_pool_damage(source, message)
     local prev = List.peekright(gui_data)
 
     if prev.source ~= source or prev.type ~= message then
-        log("Not pooling: " .. prev.source .. " vs " .. source .. " and " .. prev.type .. " vs " .. message)
         return false
     end
 
@@ -640,7 +636,7 @@ end
 -- Called by Noita when the player spawns. Must have this name.
 function OnPlayerSpawned(player_entity)
     if player_entity == nil then
-        log("damagelog: OnPlayerSpawned called, but player_entity not found!")
+        log("OnPlayerSpawned called, but player_entity not found!")
         return
     end
 
