@@ -61,6 +61,7 @@ local _settings = {}
 local _default_settings = {
     auto_size_columns = true,
     show_on_pause_screen = true,
+    auto_show_hide_on_pause = false,
     font = 1,
     max_rows_to_show = 15,
     show_grid_lines = true,
@@ -118,11 +119,14 @@ end
 -- A bit overly involved, but this way we can get automatic calls to get_setting and set_setting
 -- with only specifying the setting key (once), which would be much messier if we needed to
 -- check the imgui.* return value for every setting individually.
-local function create_widget(setting_name, widget_creator)
+local function create_widget(setting_name, widget_creator, on_change_callback)
     return function(label, ...)
         local did_change, new_value = widget_creator(label, get_setting(setting_name), ...)
         if did_change then
             set_setting(setting_name, new_value)
+            if on_change_callback ~= nil then
+                on_change_callback(setting_name, new_value)
+            end
         end
     end
 end
@@ -450,8 +454,23 @@ function draw_gui()
             set_setting("auto_size_columns", false)
         end
 
-        local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox)
+        local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox,
+            function(setting, new_value)
+                if not new_value then
+                    set_setting("auto_show_hide_on_pause", false)
+                end
+            end
+        )
         show_on_pause_screen_creator("Show log on pause screen")
+
+        local open_on_pause_creator = create_widget("auto_show_hide_on_pause", imgui.Checkbox,
+            function(setting, new_value)
+                if new_value then
+                    set_setting("show_on_pause_screen", true)
+                end
+            end
+        )
+        open_on_pause_creator("Open/close damage log on pause/unpause")
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
@@ -654,8 +673,15 @@ function OnModInit()
 end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
-    if not is_paused then
+    if is_paused then
+        if not is_inventory_pause and get_setting("auto_show_hide_on_pause") then
+            display_gui = true
+        end
+    else
         load_settings()
+        if not is_inventory_pause and get_setting("auto_show_hide_on_pause") then
+            display_gui = false
+        end
     end
 end
 
