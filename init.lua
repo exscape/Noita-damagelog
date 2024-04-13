@@ -86,18 +86,14 @@ local function reset_settings()
 end
 
 local function load_settings()
+    if ModSettingGet("damagelog.reset_settings_now") then
+        reset_settings()
+        return
+    end
+
     for key, default_value in pairs(_default_settings) do
         local stored_value = ModSettingGet("damagelog." .. key)
-        if stored_value == nil then
-            _settings[key] = default_value
-        else
-            _settings[key] = stored_value
-
-            if key == 'reset_settings_now' and stored_value then
-                reset_settings()
-                return
-            end
-        end
+        _settings[key] = choice(stored_value ~= nil, stored_value, default_value)
     end
 end
 
