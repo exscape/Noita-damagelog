@@ -70,7 +70,16 @@ local _default_settings = {
     activation_shift = false,
     activation_alt = false,
     activation_key = 5, -- 5th in the array = 'E'
+    reset_settings_now = false, -- Set in Noita's Mod Settings menu to clear everything. Auto-reset to false afterwards.
 }
+
+local function reset_settings()
+    for key, default_value in pairs(_default_settings) do
+        ModSettingRemove("damagelog." .. key)
+        _settings[key] = default_value
+    end
+    log("damagelog: Mod settings cleared!")
+end
 
 local function load_settings()
     for key, default_value in pairs(_default_settings) do
@@ -81,14 +90,13 @@ local function load_settings()
         else
             _settings[key] = stored_value
             log("Loaded stored value " .. tostring(stored_value) .. " for " .. key)
-        end
-    end
-end
 
-local function reset_settings()
-    for key, default_value in pairs(_default_settings) do
-        ModSettingRemove("damagelog." .. key)
-        _settings[key] = default_value
+            if key == 'reset_settings_now' and stored_value then
+                log("reset_settings_now was set, calling reset_settings()")
+                reset_settings()
+                return
+            end
+        end
     end
 end
 
