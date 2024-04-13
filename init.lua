@@ -72,6 +72,7 @@ local _default_settings = {
     activation_shift = false,
     activation_alt = false,
     activation_key = 5, -- 5th in the array = 'E'
+    show_help_window = true, -- Shown on first start only; this is set to false when the window is closed
     reset_settings_now = false, -- Set in Noita's Mod Settings menu to clear everything. Auto-reset to false afterwards.
 }
 
@@ -202,6 +203,52 @@ local function should_pool_damage(source, message)
     else
         return frame_diff < 120
     end
+end
+
+function draw_help_window()
+    if not imgui then return end
+
+    local font = get_setting("font")
+    imgui.PushFont(fonts[font][2])
+    local spacing_size = 0.5 -- * FontSize
+
+    imgui.SetNextWindowPos(220, 330, imgui.Cond.Once)
+
+    local window_flags = imgui.WindowFlags.AlwaysAutoResize
+    window_shown, should_show = imgui.Begin("Damage log help", get_setting("show_help_window"), window_flags)
+
+    -- This method is only called when show_help_window is true, so if this now returned FALSE,
+    -- that means the user just closed the window and Begin returned _, false.
+    if not should_show then
+        imgui.PopFont()
+        set_setting("show_help_window", false)
+        return
+    end
+
+    if not window_shown then
+        -- Window is collapsed
+        return
+    end
+
+    imgui.Text("This window will be only be shown once!")
+    imgui.Text("However, it can be accessed from the settings window (see below).")
+
+    imgui.Dummy(0, imgui.GetFontSize())
+
+    imgui.Text("To toggle the damage log: Ctrl+E by default, can be changed in the settings")
+    imgui.Text("To access settings: right-click any *non-header* row in the window")
+    imgui.Text("To hide/unhide columns: right-click any column header")
+    imgui.Text("To rearrange columns: left-click and drag the column header")
+    imgui.Text("To manually resize: disable auto-sizing in settings, then click+drag the column divider")
+
+    imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
+    if imgui.Button("Close") then
+        set_setting("show_help_window", false)
+    end
+
+    imgui.End() -- Damage log window
+    imgui.PopFont()
 end
 
 function draw_gui()
@@ -460,7 +507,7 @@ function draw_gui()
         end
         imgui.SameLine()
         if imgui.Button("Help") then
-            imgui.OpenPopup("HelpPopup")
+            set_setting("show_help_window", true)
         end
 
         if imgui.Button("Restore default settings") then
@@ -481,13 +528,6 @@ function draw_gui()
             imgui.EndPopup() -- ConfirmRestorePopup
         end
 
-        if imgui.BeginPopup("HelpPopup") then
-            imgui.TextUnformatted("Long text explaining stuff.\nDon't eat the yellow snow, and so on.")
-            if imgui.Button("Close") then
-                imgui.CloseCurrentPopup()
-            end
-            imgui.EndPopup() -- HelpPopup
-        end
         imgui.EndPopup() -- SettingsPopup
     end
     imgui.PopID()
@@ -593,6 +633,10 @@ function handle_input_and_gui()
     end
 
     draw_gui()
+
+    if get_setting("show_help_window") then
+        draw_help_window()
+    end
 end
 
 function OnModInit()
