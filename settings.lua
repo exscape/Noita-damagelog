@@ -16,7 +16,7 @@ mod_settings =
         settings = {
             {
                 id = "reset_settings_now",
-                ui_name = "Restore default settings next game load",
+                ui_name = "Restore default mod settings (once)",
                 ui_description = "Emergency fix in case you can't access the damage log in-game for any reason.",
                 value_default = false,
                 scope = MOD_SETTING_SCOPE_RUNTIME,
@@ -31,7 +31,7 @@ mod_settings =
                 ui_description = "    Settings for this mod are accessed by right-clicking\n" ..
                                  "    in any non-header row in the log in-game.\n" ..
                                  "    If you can't access the log for whatever reason, enable the\n" ..
-                                 "    setting above and restart the game, and it should show up.",
+                                 "    setting above and go back into the game, and it should show up.",
                 not_setting = true,
             },
         },

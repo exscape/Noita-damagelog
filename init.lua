@@ -590,6 +590,12 @@ function OnModInit()
     load_settings()
 end
 
+function OnPausedChanged(is_paused, is_inventory_pause)
+    if not is_paused then
+        load_settings()
+    end
+end
+
 function OnPausePreUpdate()
     if get_setting("show_on_pause_screen") then
         handle_input_and_gui()
