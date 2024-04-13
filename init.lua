@@ -206,7 +206,7 @@ local function should_pool_damage(source, message)
 end
 
 function draw_help_window()
-    if not imgui then return end
+    if not imgui or GameIsInventoryOpen() then return end
 
     local font = get_setting("font")
     imgui.PushFont(fonts[font][2])
@@ -252,7 +252,7 @@ function draw_help_window()
 end
 
 function draw_gui()
-    if not display_gui or not imgui then
+    if not display_gui or not imgui or GameIsInventoryOpen() then
         return
     end
 
