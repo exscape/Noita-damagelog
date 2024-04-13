@@ -52,6 +52,7 @@ local display_gui = display_gui_on_load
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
+local reset_window_settings = false -- window size/position will be cleared (once) if true
 
 -- Initialized in load_settings, called on mod initialization.
 -- Read from and written to using get_setting and set_setting, respectively.
@@ -78,6 +79,8 @@ local function reset_settings()
         ModSettingRemove("damagelog." .. key)
         _settings[key] = default_value
     end
+
+    reset_window_settings = true
     log("damagelog: Mod settings cleared!")
 end
 
@@ -246,6 +249,11 @@ function draw_gui()
     push_main_window_vars()
     imgui.PushFont(fonts[font][2])
     imgui.SetNextWindowBgAlpha(get_setting("background_opacity"))
+
+    if reset_window_settings then
+        imgui.SetNextWindowPos(120, 200, imgui.Cond.Always) -- Technically once anyway
+        reset_window_settings = false
+    end
 
     local window_flags = imgui.WindowFlags.AlwaysAutoResize
     window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
