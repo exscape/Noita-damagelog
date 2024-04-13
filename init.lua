@@ -358,8 +358,9 @@ function draw_gui()
 
     -- Add popup to right-clicking on any of the columns (except the header)
     local is_any_column_hovered = false
-    for column = 1, 5 do
-        if bit.band(imgui.TableGetColumnFlags(column - 1), imgui.TableColumnFlags.IsHovered) then
+    for column = 0, 4 do
+        if bit.band(imgui.TableGetColumnFlags(column), imgui.TableColumnFlags.IsHovered) ~= 0 then
+            -- This is where I learned that 0 evaluates to true in Lua!
             is_any_column_hovered = true
             break
         end
