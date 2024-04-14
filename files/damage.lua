@@ -109,6 +109,18 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
     end
 end
 
+local function is_poolable(source, type)
+    -- TODO: expand with other sources
+    local sources_to_pool = {
+        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
+        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
+        ["Holy mountain"] = 1, ["Plasma beam"] = 1
+    }
+    local types_to_pool = { Bite = 1, ["Cursed rock"] = 1 }
+
+    return sources_to_pool[source] or types_to_pool[type]
+end
+
 -- Called by Noita every time the player takes damage
 -- Hook is initialized in init.lua
 function damage_received(damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
@@ -141,6 +153,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         hp = hp_after,
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
+        is_poolable = is_poolable(source, damage_type),
         id = next_hit_id
     })
 

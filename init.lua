@@ -190,18 +190,7 @@ end
 end
 
 local function should_pool_damage(source, type)
-    -- TODO: expand with other sources
-    local sources_to_pool = {
-        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
-        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
-        ["Holy mountain"] = 1, ["Plasma beam"] = 1
-    }
-    local types_to_pool = { Bite = 1, ["Cursed rock"] = 1 }
-
-    if not sources_to_pool[source] and not types_to_pool[type] then
-        return false
-    end
-
+    if List.isempty(gui_data) then return false end
     local prev = List.peekright(gui_data)
 
     if prev.source ~= source or prev.type ~= type then
@@ -602,7 +591,7 @@ function update_gui_data()
         -- if the last damage entry was from the same source *AND* it was recent.
         -- Note that this uses popright to remove the previous row entirely.
         local pooled_damage = 0
-        if not List.isempty(gui_data) and should_pool_damage(source, type) then
+        if damage_entry.is_poolable and should_pool_damage(source, type) then
             pooled_damage = List.popright(gui_data).raw_damage
         end
 
