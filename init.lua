@@ -189,21 +189,22 @@ end
     end
 end
 
-local function should_pool_damage(source, message)
+local function should_pool_damage(source, type)
     -- TODO: expand with other sources
     local sources_to_pool = {
         Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
         ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
         ["Holy mountain"] = 1, ["Plasma beam"] = 1
     }
+    local types_to_pool = { Bite = 1 }
 
-    if not sources_to_pool[source] then
+    if not sources_to_pool[source] and not types_to_pool[type] then
         return false
     end
 
     local prev = List.peekright(gui_data)
 
-    if prev.source ~= source or prev.type ~= message then
+    if prev.source ~= source or prev.type ~= type then
         return false
     end
 
