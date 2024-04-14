@@ -585,6 +585,7 @@ function update_gui_data()
         local type = damage_entry.type
         if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
         if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+        source = (source:gsub("^%l", string.upper))
         type = (type:gsub("^%l", string.upper))
 
         -- Pool damage from fast sources (like fire, once per frame = 60 times per second),

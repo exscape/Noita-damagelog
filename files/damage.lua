@@ -9,8 +9,10 @@ local next_hit_id = 1          -- The ID that will be used for the next hit (i.e
 local damage_from_material_prefix = nil
 
 local function get_entity_name(entity_id)
+    -- Yes, this is hacky, but it probably beats having a single English word among the entities
+    local unknown = "$menuoptions_configurecontrols_keyname_unknown"
     if entity_id == 0 then
-        return "Unknown"
+        return unknown
     end
 
     local entity_raw_name = EntityGetName(entity_id)
@@ -22,28 +24,17 @@ local function get_entity_name(entity_id)
         local filename = EntityGetFilename(entity_id)
         if filename and #filename > 0 then
             -- if statement is probably useless, but eh
-            return additional_entities[filename] or "Unknown"
+            return additional_entities[filename] or unknown
         else
-            return "Unknown"
+            return unknown
         end
     -- Handle a few special cases
     elseif entity_raw_name == "DEBUG_NAME:player" then
-        return "Player"
+        return "$animal_player"
     elseif entity_raw_name == "workshop_altar" then
-        return "Holy mountain"
-    elseif entity_raw_name:sub(1, 1) ~= '$' then
-        -- Ugly, but at least it will show up.
-        -- Not sure where this happens, but it happened for DEBUG_NAME:player and workshop_altar
-        -- prior to handling them as special cases above.
-        return entity_raw_name
-    end
-
-    -- If we get here, we have a non-nil raw name that does begin with a $, so look it up
-    local entity_name = GameTextGet(entity_raw_name)
-    if entity_name == nil or #entity_name <= 0 then
-        return "RAW: " .. tostring(entity_raw_name)
+        return "$biome_holymountain"
     else
-        return entity_name
+        return entity_raw_name
     end
 end
 
@@ -70,26 +61,6 @@ local function get_player_health()
     return tonumber(ComponentGetValue(damagemodels[1], "hp"))
 end
 
-local function damage_source_from_message_only(type)
-    -- Most of these will probably never trigger as the entity will be displayed instead of
-    -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
-    local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
-                           drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
-                           drowning = 1, kick = 1, fall = 1, midas = 1, curse = 1, hunger = 1,
-                           sun = 1, supernova = 1, overeating = 1 }
-    local mapped_types = { radioactive = "Toxic sludge", physicshit = "Physics", plasmabeam = "Plasma beam",
-                           darksun = "Dark Sun", frommaterial = "Material", rock_curse = "Cursed rock",
-                           orb_blood = "Blood link", hitfx_curse = "Venomous curse" }
-
-    if simple_types[type] then
-        return (type:gsub("^%l", string.upper)) -- Uppercased first letter
-    elseif mapped_types[type] then
-        return mapped_types[type]
-    else
-        return "TYPE: " .. type
-    end
-end
-
 local function source_and_type_from_entity_and_message(entity_thats_responsible, message)
     -- Ugh. The message argument is ALMOST always nice (e.g. "$damage_fire"), but AFAIK there is
     -- EXACTLY one other case: damage from materials, such as lava, which uses $damage_frommaterial.
@@ -108,34 +79,31 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
 
     local damage_was_from_material = message:find(damage_from_material_prefix)
     message = (message:gsub(damage_from_material_prefix, ""))
+    -- This is typically a $ string, but not always. If not, the first letter should be uppercased.
     local damage_type = (message:gsub("^%l", string.upper))
 
     if entity_thats_responsible ~= 0 then
         -- Show the responsible entity if one exists
         return get_entity_name(entity_thats_responsible), damage_type
-    elseif message:sub(1,8) == "$damage_" then
+    elseif message:sub(1,1) == "$" or damage_was_from_material then
         -- No responsible entity; damage is something like toxic sludge, fire etc.
-        -- Show that as the source.
-        return damage_source_from_message_only(message:sub(9, #message)), damage_type
-    elseif damage_was_from_material then
-        return (message:gsub("^%l", string.upper)), damage_type
+        -- Show that as the source and type.
+        return damage_type, damage_type
     else
         -- Should never happen; displayed for debugging purposes so that the mod can be updated
         log("damagelog WARNING: unknown message: " .. tostring(message))
-        return "MSG: " .. message, damage_type
+        return message, damage_type
     end
 end
 
 local function is_poolable(source, type)
-    -- TODO: expand with other sources
-    local sources_to_pool = {
-        Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
-        ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
-        ["Holy mountain"] = 1, ["Plasma beam"] = 1
-    }
-    local types_to_pool = { Bite = 1, ["Cursed rock"] = 1 }
-
-    return sources_to_pool[source] or types_to_pool[type]
+    -- The first check might need some explaining.
+    -- Noita sends "damage from material: XYZ" as message for e.g. lava, poison droplets (not poison STAINS)
+    -- and other things. We probably want to pool all of them, but even if we didn't,
+    -- there's no good solution. We would need to check for the string "fire" in every language, then
+    -- "acid" in every language, and so on, since Noita translates them prematurely.
+    -- The second is more straightforward: if the SOURCE is a $damage string, it's from a stain or similar.
+    return type:sub(1,1) ~= '$' or source:sub(1,8) == "$damage_"
 end
 
 -- Called by Noita every time the player takes damage
