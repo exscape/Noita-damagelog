@@ -53,6 +53,7 @@ local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
 local reset_window_settings = false -- window size/position will be cleared (once) if true
+local display_gui_after_wand_pickup = nil
 
 -- Initialized in load_settings, called on mod initialization.
 -- Read from and written to using get_setting and set_setting, respectively.
@@ -678,13 +679,25 @@ function OnModInit()
 end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
-    if is_paused then
-        if not is_inventory_pause and get_setting("auto_show_hide_on_pause") then
+    if is_inventory_pause or display_gui_after_wand_pickup ~= nil then
+        if is_paused then
+            -- Picking up a wand. Always hide the GUI if it's shown, but show it again afterwards
+            -- if it was visible to begin with
+            display_gui_after_wand_pickup = display_gui
+            display_gui = false
+        else
+            display_gui = display_gui_after_wand_pickup
+            display_gui_after_wand_pickup = nil
+        end
+    elseif is_paused then
+        -- "Standard" pause, i.e. the escape menu
+        if get_setting("auto_show_hide_on_pause") then
             display_gui = true
         end
     else
+        -- Return from the escape menu
         load_settings()
-        if not is_inventory_pause and get_setting("auto_show_hide_on_pause") then
+        if get_setting("auto_show_hide_on_pause") then
             display_gui = false
         end
     end
