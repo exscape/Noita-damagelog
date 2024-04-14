@@ -6,6 +6,7 @@ local additional_entities = dofile_once("mods/damagelog/files/additional_entitie
 
 local damage_data = List.new() -- All damage that has not yet been received and parsed by the GUI code
 local next_hit_id = 1          -- The ID that will be used for the next hit (i.e. no hit with this ID exists yet)
+local damage_from_material_prefix = nil
 
 local function get_entity_name(entity_id)
     if entity_id == 0 then
@@ -37,6 +38,7 @@ local function get_entity_name(entity_id)
         return entity_raw_name
     end
 
+    -- If we get here, we have a non-nil raw name that does begin with a $, so look it up
     local entity_name = GameTextGet(entity_raw_name)
     if entity_name == nil or #entity_name <= 0 then
         return "RAW: " .. tostring(entity_raw_name)
@@ -89,8 +91,23 @@ local function damage_source_from_message_only(type)
 end
 
 local function source_and_type_from_entity_and_message(entity_thats_responsible, message)
-    local damage_was_from_material = message:find("damage from material: ")
-    message = (message:gsub("damage from material: ", ""))
+    -- Ugh. The message argument is ALMOST always nice (e.g. "$damage_fire"), but AFAIK there is
+    -- EXACTLY one other case: damage from materials, such as lava, which uses $damage_frommaterial.
+    -- This will cause message to look like this:
+    -- "damage from material: Lava"
+    -- or, if you play in German:
+    -- "Schaden durch Substanz: Lava"
+    -- In other words, the message changes depending on the language, rather than using
+    -- the untranslated string as in every other case.
+    -- This seems to work fine in every latin language, and Russian; the others can't be displayed by
+    -- Dear ImGui with the fonts we have anyway, so there's not a lot I can do for the other languages.
+    if damage_from_material_prefix == nil then
+        damage_from_material_prefix = GameTextGet("$damage_frommaterial") or "damage from material: $0"
+        damage_from_material_prefix = (damage_from_material_prefix:gsub("$0", ""))
+    end
+
+    local damage_was_from_material = message:find(damage_from_material_prefix)
+    message = (message:gsub(damage_from_material_prefix, ""))
     local damage_type = (message:gsub("^%l", string.upper))
 
     if entity_thats_responsible ~= 0 then
