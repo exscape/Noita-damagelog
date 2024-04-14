@@ -73,8 +73,11 @@ local function damage_source_from_message_only(type)
     -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
     local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
                            drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
-                           drowning = 1, kick = 1, fall = 1, midas = 1 }
-    local mapped_types = { radioactive = "Toxic sludge", physicshit = "Physics", plasmabeam = "Plasma beam" }
+                           drowning = 1, kick = 1, fall = 1, midas = 1, curse = 1, hunger = 1,
+                           sun = 1, supernova = 1, overeating = 1 }
+    local mapped_types = { radioactive = "Toxic sludge", physicshit = "Physics", plasmabeam = "Plasma beam",
+                           darksun = "Dark Sun", frommaterial = "Material", rock_curse = "Cursed rock",
+                           orb_blood = "Blood link", hitfx_curse = "Venomous curse" }
 
     if simple_types[type] then
         return (type:gsub("^%l", string.upper)) -- Uppercased first letter

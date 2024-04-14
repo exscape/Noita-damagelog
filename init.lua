@@ -196,7 +196,7 @@ local function should_pool_damage(source, type)
         ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
         ["Holy mountain"] = 1, ["Plasma beam"] = 1
     }
-    local types_to_pool = { Bite = 1 }
+    local types_to_pool = { Bite = 1, ["Cursed rock"] = 1 }
 
     if not sources_to_pool[source] and not types_to_pool[type] then
         return false
