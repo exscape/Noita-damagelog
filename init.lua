@@ -193,7 +193,7 @@ local function should_pool_damage(source, message)
     local sources_to_pool = {
         Fire = 1, Acid = 1, Poison = 1, Drowning = 1, Lava = 1,
         ["Toxic sludge"] = 1, ["Freezing vapour"] = 1, ["Freezing liquid"] = 1,
-        ["Holy mountain"] = 1
+        ["Holy mountain"] = 1, ["Plasma beam"] = 1
     }
 
     if not sources_to_pool[source] then
