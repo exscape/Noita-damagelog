@@ -73,7 +73,7 @@ local function damage_source_from_message_only(type)
     -- the damage type, but I'd rather have "Source: drill" shown than "Unknown" just in case.
     local simple_types = { projectile = 1, electricity = 1, explosion = 1, fire = 1, melee = 1,
                            drill = 1, slice = 1, ice = 1, healing = 1, poison = 1, water = 1,
-                           drowning = 1, kick = 1, fall = 1 }
+                           drowning = 1, kick = 1, fall = 1, midas = 1 }
     local mapped_types = { radioactive = "Toxic sludge", physicshit = "Physics", plasmabeam = "Plasma beam" }
 
     if simple_types[type] then
