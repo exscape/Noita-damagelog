@@ -5,7 +5,7 @@ dofile_once('data/scripts/debug/keycodes.lua')
 
 --[[
     Here's a basic overview of how the mod works, for my future self, and others interested.
-    Hopefully this text won't become outdated; I've tried to keep the code farily self-documenting
+    Hopefully this text won't become outdated; I've tried to keep the code fairly self-documenting
     to avoid stale comments.
 
     First, it depends on dextercd's excellent NoitaDearImGui mod that brings the Dear ImGui library
@@ -59,20 +59,24 @@ local reset_window_settings = false -- window size/position will be cleared (onc
 local _settings = {}
 
 local _default_settings = {
+    -- Behavior
     auto_size_columns = true,
     show_on_pause_screen = true,
     auto_show_hide_on_pause = false,
+    activation_ctrl = true,
+    activation_shift = false,
+    activation_alt = false,
+    activation_key = 5, -- 5th in the array = 'E'
+    -- Appearance
     font = 1,
     max_rows_to_show = 15,
     show_grid_lines = true,
     alternate_row_colors = false,
     foreground_opacity = 0.7,
     background_opacity = 0.3,
+    -- Advanced
     ignore_mouse_input = false,
-    activation_ctrl = true,
-    activation_shift = false,
-    activation_alt = false,
-    activation_key = 5, -- 5th in the array = 'E'
+    -- Pseudo-settings (not shown in UI)
     show_help_window = true, -- Shown on first start only; this is set to false when the window is closed
     reset_settings_now = false, -- Set in Noita's Mod Settings menu to clear everything. Auto-reset to false afterwards.
 }
@@ -442,9 +446,10 @@ function draw_gui()
     if imgui.BeginPopup("SettingsPopup") then
         imgui.Text("Settings are applied and saved immediately.")
 
-        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         ---------------- Start of settings ----------------
+
+        imgui.SeparatorText("Behavior")
 
         -- These follow a different pattern than the others, so create_widget isn't used
         if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then
@@ -474,6 +479,30 @@ function draw_gui()
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
+        imgui.Text("Activation hotkey")
+        imgui.SameLine()
+        local activation_ctrl_creator = create_widget("activation_ctrl", imgui.Checkbox)
+        activation_ctrl_creator("Ctrl")
+        imgui.SameLine()
+        local activation_alt_creator = create_widget("activation_alt", imgui.Checkbox)
+        activation_alt_creator("Alt")
+        imgui.SameLine()
+        local activation_shift_creator = create_widget("activation_shift", imgui.Checkbox)
+        activation_shift_creator("Shift")
+        imgui.SameLine()
+
+        -- These are in the same order as in data/scripts/debug/keycodes.lua, which is also why some other
+        -- potentially useful keys are not listed
+        local allowed_keys = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+            'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
+
+        imgui.PushItemWidth(imgui.GetFontSize() * 3)
+        local key_creator = create_widget("activation_key", imgui.Combo)
+        key_creator("##Key", allowed_keys)
+        imgui.PopItemWidth()
+
+        imgui.SeparatorText("Appearance")
+
         local font_creator = create_widget("font", imgui.Combo)
         font_creator("Font", {
             "Noita Pixel",
@@ -498,31 +527,7 @@ function draw_gui()
         local background_opacity_creator = create_widget("background_opacity", imgui.SliderFloat)
         background_opacity_creator("Background opacity", 0.0, 1.0)
 
-        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
-
-        imgui.Text("Activation hotkey")
-        imgui.SameLine()
-        local activation_ctrl_creator = create_widget("activation_ctrl", imgui.Checkbox)
-        activation_ctrl_creator("Ctrl")
-        imgui.SameLine()
-        local activation_alt_creator = create_widget("activation_alt", imgui.Checkbox)
-        activation_alt_creator("Alt")
-        imgui.SameLine()
-        local activation_shift_creator = create_widget("activation_shift", imgui.Checkbox)
-        activation_shift_creator("Shift")
-        imgui.SameLine()
-
-        -- These are in the same order as in data/scripts/debug/keycodes.lua, which is also why some other
-        -- potentially useful keys are not listed
-        local allowed_keys = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-            'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
-
-        imgui.PushItemWidth(imgui.GetFontSize() * 3)
-        local key_creator = create_widget("activation_key", imgui.Combo)
-        key_creator("##Key", allowed_keys)
-        imgui.PopItemWidth()
-
-        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+        imgui.SeparatorText("Advanced")
 
         imgui.Text([[Mouse click-through can be enabled in Noita's "Mod Settings" menu.]])
         imgui.Text([[When enabled, accessing this window is impossible,]])
@@ -535,12 +540,12 @@ function draw_gui()
             imgui.CloseCurrentPopup()
         end
         imgui.SameLine()
-        if imgui.Button("Help") then
-            set_setting("show_help_window", true)
-        end
-
         if imgui.Button("Restore default settings") then
             imgui.OpenPopup("ConfirmRestorePopup")
+        end
+        imgui.SameLine()
+        if imgui.Button("Help") then
+            set_setting("show_help_window", true)
         end
 
         if imgui.BeginPopup("ConfirmRestorePopup") then
