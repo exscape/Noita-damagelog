@@ -45,15 +45,13 @@ local gui_data = List.new()
 -- No point in storing data that can never be shown.
 local max_damage_entries = 200
 
-local display_gui_on_load = true -- TODO: should be false... EXCEPT for the first time.
-local display_gui = display_gui_on_load
-
--- State that can't be affected by the player
+-- State that can't be directly affected by the player
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
 local reset_window_settings = false -- window size/position will be cleared (once) if true
 local display_gui_after_wand_pickup = nil
+local display_gui = false
 
 -- Initialized in load_settings, called on mod initialization.
 -- Read from and written to using get_setting and set_setting, respectively.
@@ -62,6 +60,7 @@ local _settings = {}
 local _default_settings = {
     -- Behavior
     auto_size_columns = true,
+    show_log_on_load = false,
     show_on_pause_screen = true,
     auto_show_hide_on_pause = false,
     activation_ctrl = true,
@@ -80,6 +79,7 @@ local _default_settings = {
     -- Pseudo-settings (not shown in UI)
     show_help_window = true, -- Shown on first start only; this is set to false when the window is closed
     reset_settings_now = false, -- Set in Noita's Mod Settings menu to clear everything. Auto-reset to false afterwards.
+    force_show_on_load = true, -- Used until the user has seen the settings OR used the activation hotkey
 }
 
 local function reset_settings()
@@ -437,6 +437,7 @@ function draw_gui()
     if imgui.BeginPopup("SettingsPopup") then
         imgui.Text("Settings are applied and saved immediately.")
 
+        set_setting("force_show_on_load", false)
 
         ---------------- Start of settings ----------------
 
@@ -449,6 +450,9 @@ function draw_gui()
         if imgui.RadioButton("Manual sizing (click divider + drag).", not auto_size_columns) then
             set_setting("auto_size_columns", false)
         end
+
+        local show_log_on_load_creator = create_widget("show_log_on_load", imgui.Checkbox)
+        show_log_on_load_creator("Open damage log when Noita starts")
 
         local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox,
             function(setting, new_value)
@@ -646,6 +650,9 @@ function handle_input_and_gui()
 
     if activation_hotkey_was_just_pressed() then
         display_gui = not display_gui
+        if get_setting("force_show_on_load") then
+            set_setting("force_show_on_load", false)
+        end
     end
 
     local highest_id_read = 0
@@ -667,6 +674,10 @@ end
 
 function OnModInit()
     load_settings()
+
+    -- Show the GUI until the user has seen the settings, to make sure they know how to open the log window
+    -- Also reset once they've toggled the window with the activation hotkey.
+    display_gui = get_setting("show_log_on_load") or get_setting("force_show_on_load")
 end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
