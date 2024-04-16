@@ -609,9 +609,9 @@ function update_gui_data()
             location = damage_entry.location
         end
 
-        source = (source:gsub("^%l", string.upper))
-        type = (type:gsub("^%l", string.upper))
-        location = (location:gsub("^%l", string.upper))
+        source = initialupper(source)
+        type = initialupper(type)
+        location = initialupper(location)
 
         -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
         -- if the last damage entry was from the same source *AND* it was recent.

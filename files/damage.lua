@@ -80,7 +80,7 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
     local damage_was_from_material = message:find(damage_from_material_prefix)
     message = (message:gsub(damage_from_material_prefix, ""))
     -- This is typically a $ string, but not always. If not, the first letter should be uppercased.
-    local damage_type = (message:gsub("^%l", string.upper))
+    local damage_type = initialupper(message)
 
     if entity_thats_responsible ~= 0 then
         -- Show the responsible entity if one exists

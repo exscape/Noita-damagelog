@@ -123,4 +123,19 @@ function load_damage_data()
     return damage_data
 end
 
+-- Ugly? Yes. But Lua doesn't support these characters for string.upper
+-- This is a complete list of the non-ASCII characters used as a first letter in Noita as of this writing,
+-- except for Chinese/Japanese/Korean, which we can't display anyway due to a lack of supported fonts.
+local lc_uc_map = { ["р"] = "Р", ["в"] = "В", ["б"] = "Б", ["у"] = "У", ["о"] = "О", ["с"] = "С", ["п"] = "П", ["э"] = "Э", ["é"] = "É", ["л"] = "Л", ["ф"] = "Ф", ["я"] = "Я", ["ш"] = "Ш", ["н"] = "Н", ["и"] = "И", ["á"] = "Á", ["а"] = "А", ["з"] = "З", ["ü"] = "Ü", ["к"] = "К", ["г"] = "Г", ["ś"] = "Ś", ["ż"] = "Ż", ["м"] = "М", ["д"] = "Д", ["х"] = "Х", ["ł"] = "Ł", ["ж"] = "Ж", ["т"] = "Т", ["ч"] = "Ч", ["ц"] = "Ц" }
+
+function initialupper(s)
+    -- All relevant characters are 2-byte characters, and since Lua doesn't support UTF-8, we need to fetch the first two bytes
+    local uc = lc_uc_map[s:sub(1, 2)]
+    if uc ~= nil then
+        return uc .. s:sub(3, #s) -- Same deal here
+    else
+        return (s:gsub("^%l", string.upper))
+    end
+end
+
 return { ["List"] = List }
