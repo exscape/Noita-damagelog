@@ -121,6 +121,12 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     else
         -- The game GUI seems to do this; our display can show 1 hp extra without flooring first
         hp_after = math.floor(hp_after)
+
+    end
+
+    local current_biome = BiomeMapGetName() -- Uses the camera position vs the player transform as it's faster
+    if current_biome:sub(1, 1) ~= '$' then
+        current_biome = " "
     end
 
     -- Clean up old entries from damage_data; i.e. entries that have already been received by the GUI code
@@ -139,7 +145,8 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
         is_poolable = is_poolable(source, damage_type),
-        id = next_hit_id
+        location = current_biome,
+        id = next_hit_id,
     })
 
     store_damage_data(damage_data, next_hit_id)

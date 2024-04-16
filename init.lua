@@ -251,6 +251,11 @@ function draw_help_window()
 
     imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
+    imgui.Text([[Note that the "location" column is hidden by default.]])
+    imgui.Text([[It shows in which biome the damage was taken.]])
+
+    imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
     if imgui.Button("Close") then
         set_setting("show_help_window", false)
     end
@@ -340,7 +345,7 @@ function draw_gui()
         choice(get_setting("show_grid_lines"), imgui.TableFlags.BordersInner, 0)
     )
 
-    imgui.BeginTable("Damage", 5, table_flags)
+    imgui.BeginTable("Damage", 6, table_flags)
 
     -- Column setup + headers
     if font == 2 or font == 3 then
@@ -348,6 +353,7 @@ function draw_gui()
     end
 
     imgui.PushStyleColor(imgui.Col.TableHeaderBg, 0.45, 0.45, 0.45, get_setting("foreground_opacity"))
+    imgui.TableSetupColumn("Location", imgui.TableColumnFlags.DefaultHide)
     imgui.TableSetupColumn("Source")
     imgui.TableSetupColumn("Type")
     imgui.TableSetupColumn("Damage")
@@ -366,6 +372,9 @@ function draw_gui()
     if List.length(gui_data) == 0 then
         imgui.TableNextRow()
 
+
+        imgui.TableNextColumn()
+        imgui.Text(" ")
         imgui.TableNextColumn()
         imgui.Text("Hitless")
         imgui.TableNextColumn()
@@ -387,6 +396,9 @@ function draw_gui()
 
     for row = first_index, gui_data.last do
         imgui.TableNextRow()
+
+        imgui.TableNextColumn()
+        imgui.Text(gui_data[row].location)
 
         imgui.TableNextColumn()
         imgui.Text(gui_data[row].source)
@@ -589,8 +601,17 @@ function update_gui_data()
         local type = damage_entry.type
         if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
         if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+
+        local location
+        if damage_entry.location:sub(1, 1) == '$' then
+            location = GameTextGet(damage_entry.location)
+        else
+            location = damage_entry.location
+        end
+
         source = (source:gsub("^%l", string.upper))
         type = (type:gsub("^%l", string.upper))
+        location = (location:gsub("^%l", string.upper))
 
         -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
         -- if the last damage entry was from the same source *AND* it was recent.
@@ -608,6 +629,7 @@ function update_gui_data()
             hp = format_number(damage_entry.hp),
             time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
             frame = damage_entry.frame,
+            location = location,
             id = damage_entry.id
         })
     end
