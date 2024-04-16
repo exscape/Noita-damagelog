@@ -38,13 +38,6 @@ dofile_once('data/scripts/debug/keycodes.lua')
 -- The processed version of the damage data, i.e. formatted strings for the GUI
 local gui_data = List.new()
 
--- TEMPORARY settings
--- TODO: rework these also and show them in the GUI
--- TODO: what's a reasonable limit?
--- WITHOUT SCROLLING this can be removed, max_rows_to_show should be used instead.
--- No point in storing data that can never be shown.
-local max_damage_entries = 200
-
 -- State that can't be directly affected by the player
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
@@ -57,6 +50,7 @@ local display_gui = false
 -- Read from and written to using get_setting and set_setting, respectively.
 local _settings = {}
 
+local max_rows_allowed = 60 -- Player has the choice of showing 1 to this many rows
 local _default_settings = {
     -- Behavior
     auto_size_columns = true,
@@ -520,7 +514,7 @@ function draw_gui()
         })
 
         local max_rows_to_show_creator = create_widget("max_rows_to_show", imgui.SliderInt)
-        max_rows_to_show_creator("Max rows to show", 1, 60)
+        max_rows_to_show_creator("Max rows to show", 1, max_rows_allowed)
 
         local show_grid_lines_creator = create_widget("show_grid_lines", imgui.Checkbox)
         show_grid_lines_creator("Show grid lines")
@@ -635,7 +629,7 @@ function update_gui_data()
     end
 
     -- Clean up excessive entries
-    while List.length(gui_data) > max_damage_entries do
+    while List.length(gui_data) > max_rows_allowed do
         List.popleft(gui_data)
     end
 end
