@@ -58,7 +58,8 @@ local function get_player_health()
         return 0
     end
 
-    return tonumber(ComponentGetValue(damagemodels[1], "hp"))
+    return tonumber(ComponentGetValue2(damagemodels[1], "hp")) * 25,
+           tonumber(ComponentGetValue2(damagemodels[1], "max_hp")) * 25
 end
 
 local function source_and_type_from_entity_and_message(entity_thats_responsible, message)
@@ -112,16 +113,13 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     local source, damage_type = source_and_type_from_entity_and_message(entity_thats_responsible, message)
     damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
 
-    local hp_after = get_player_health() * 25 - damage -- TODO: use magic number? (GUI_HP_MULTIPLIER)
-    if hp_after < 0 then
-         -- Technically a bug? "The gods are very curious"
-        hp_after = 0
-    elseif hp_after < 1 then
+    local hp, max_hp = get_player_health()
+    local hp_after = clamp(hp - damage, 0, max_hp)
+    if hp_after < 1 then
         hp_after = 1
     else
         -- The game GUI seems to do this; our display can show 1 hp extra without flooring first
         hp_after = math.floor(hp_after)
-
     end
 
     local current_biome = BiomeMapGetName() -- Uses the camera position vs the player transform as it's faster
