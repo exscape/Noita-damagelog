@@ -115,6 +115,8 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
 
     local hp, max_hp = get_player_health()
     local hp_after = clamp(hp - damage, 0, max_hp)
+    max_hp = clamp(math.floor(max_hp), 1, max_hp) -- Noita seems to floor prior to displaying it
+
     if hp_after < 1 then
         hp_after = 1
     else
@@ -140,6 +142,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         type = damage_type,
         damage = damage,
         hp = hp_after,
+        max_hp = max_hp,
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
         is_poolable = is_poolable(source, damage_type),

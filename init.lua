@@ -235,8 +235,7 @@ function draw_help_window()
 
     imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
-    imgui.Text([[Note that the "location" column is hidden by default.]])
-    imgui.Text([[It shows in which biome the damage was taken.]])
+    imgui.Text([[Note that the "location" and "max hp" columns are hidden by default.]])
 
     imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
@@ -329,7 +328,7 @@ function draw_gui()
         choice(get_setting("show_grid_lines"), imgui.TableFlags.BordersInner, 0)
     )
 
-    imgui.BeginTable("Damage", 6, table_flags)
+    imgui.BeginTable("Damage", 7, table_flags)
 
     -- Column setup + headers
     if font == 2 or font == 3 then
@@ -342,6 +341,7 @@ function draw_gui()
     imgui.TableSetupColumn("Type")
     imgui.TableSetupColumn("Damage")
     imgui.TableSetupColumn("HP")
+    imgui.TableSetupColumn("Max HP", imgui.TableColumnFlags.DefaultHide)
     imgui.TableSetupColumn("Time")
     imgui.TableHeadersRow()
     imgui.PopStyleColor()
@@ -361,6 +361,8 @@ function draw_gui()
         imgui.Text(" ")
         imgui.TableNextColumn()
         imgui.Text("Hitless")
+        imgui.TableNextColumn()
+        imgui.Text(" ")
         imgui.TableNextColumn()
         imgui.Text(" ")
         imgui.TableNextColumn()
@@ -400,6 +402,9 @@ function draw_gui()
 
         imgui.TableNextColumn()
         imgui.Text(gui_data[row].hp)
+
+        imgui.TableNextColumn()
+        imgui.Text(gui_data[row].max_hp)
 
         -- So this is unfortunately very hacky.
         -- To keep the GUI time updated in most cases while also not jumping back between
@@ -611,6 +616,7 @@ function update_gui_data()
             damage = { damage_entry.damage < 0, format_number(damage_entry.damage + pooled_damage) },
             raw_damage = damage_entry.damage + pooled_damage,
             hp = format_number(damage_entry.hp),
+            max_hp = format_number(damage_entry.max_hp),
             time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
             frame = damage_entry.frame,
             location = location,
