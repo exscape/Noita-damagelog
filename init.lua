@@ -130,6 +130,13 @@ local function create_widget(setting_name, widget_creator, on_change_callback)
     end
 end
 
+-- Associates a tooltip to the *last* created widget, not the upcoming one!
+local function create_tooltip(s)
+    if imgui.IsItemHovered(imgui.HoveredFlags.ForTooltip) then
+        imgui.SetTooltip(s)
+    end
+end
+
 local fonts = {
     {"Noita Pixel", imgui.GetNoitaFont()},
     {"Noita Pixel 1.4x", imgui.GetNoitaFont1_4x()},
@@ -451,9 +458,11 @@ function draw_gui()
         if imgui.RadioButton("Manual sizing (click divider + drag).", not auto_size_columns) then
             set_setting("auto_size_columns", false)
         end
+        create_tooltip("Column sizes will be remembered when manual sizing is enabled.")
 
         local show_log_on_load_creator = create_widget("show_log_on_load", imgui.Checkbox)
         show_log_on_load_creator("Open damage log when Noita starts")
+        create_tooltip("Shows the damage log window whenever you start or continue a run.")
 
         local show_on_pause_screen_creator = create_widget("show_on_pause_screen", imgui.Checkbox,
             function(setting, new_value)
@@ -463,6 +472,7 @@ function draw_gui()
             end
         )
         show_on_pause_screen_creator("Show log on pause screen")
+        create_tooltip("If false, the log (and settings/help) will be hidden when the game is paused.")
 
         local open_on_pause_creator = create_widget("auto_show_hide_on_pause", imgui.Checkbox,
             function(setting, new_value)
@@ -472,19 +482,25 @@ function draw_gui()
             end
         )
         open_on_pause_creator("Open/close damage log on pause/unpause")
+        create_tooltip("Requires 'Show log on pause screen'.\nHandy way to check the log with no risk of getting killed!")
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
+        local activation_tooltip = "Any combination of Ctrl/Alt/Shift is allowed, including using none of them."
         imgui.Text("Activation hotkey")
+        create_tooltip(activation_tooltip)
         imgui.SameLine()
         local activation_ctrl_creator = create_widget("activation_ctrl", imgui.Checkbox)
         activation_ctrl_creator("Ctrl")
+        create_tooltip(activation_tooltip)
         imgui.SameLine()
         local activation_alt_creator = create_widget("activation_alt", imgui.Checkbox)
         activation_alt_creator("Alt")
+        create_tooltip(activation_tooltip)
         imgui.SameLine()
         local activation_shift_creator = create_widget("activation_shift", imgui.Checkbox)
         activation_shift_creator("Shift")
+        create_tooltip(activation_tooltip)
         imgui.SameLine()
 
         -- These are in the same order as in data/scripts/debug/keycodes.lua, which is also why some other
@@ -495,6 +511,7 @@ function draw_gui()
         imgui.PushItemWidth(imgui.GetFontSize() * 3)
         local key_creator = create_widget("activation_key", imgui.Combo)
         key_creator("##Key", allowed_keys)
+        create_tooltip(activation_tooltip)
         imgui.PopItemWidth()
 
         imgui.SeparatorText("Appearance")
@@ -510,6 +527,7 @@ function draw_gui()
 
         local max_rows_to_show_creator = create_widget("max_rows_to_show", imgui.SliderInt)
         max_rows_to_show_creator("Max rows to show", 1, max_rows_allowed)
+        create_tooltip("The log will resize as you take damage, but never above this number of rows.")
 
         local show_grid_lines_creator = create_widget("show_grid_lines", imgui.Checkbox)
         show_grid_lines_creator("Show grid lines")
