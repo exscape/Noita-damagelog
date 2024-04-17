@@ -191,18 +191,8 @@ local function should_pool_damage(source, type)
         return false
     end
 
-    -- Only one check remaining: whether the previous damage was recent enough.
-    -- For fire (and some other effects like cursed area damage), recent enough means within a couple of frames.
-    -- For toxic sludge, poison and perhaps others, use a bit longer, since they trigger less often.
-    -- Fire uses more than 1-2 frames on purpose, so that if you're constantly getting set on fire and having it
-    -- put out, we don't spam the log.
     local frame_diff = GameGetFrameNum() - prev.frame
-
-    if source == "Fire" then
-        return frame_diff < 30
-    else
-        return frame_diff < 120
-    end
+    return frame_diff < 120
 end
 
 function draw_help_window()
