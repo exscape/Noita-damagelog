@@ -60,7 +60,7 @@ local _default_settings = {
     activation_ctrl = true,
     activation_shift = false,
     activation_alt = false,
-    activation_key = 5, -- 5th in the array = 'E'
+    activation_key = 17, -- 17th in the array, which is Q
     -- Appearance
     font = 1,
     max_rows_to_show = 15,
@@ -237,7 +237,7 @@ function draw_help_window()
 
     imgui.Dummy(0, imgui.GetFontSize())
 
-    imgui.Text("To toggle the damage log: Ctrl+E by default, can be changed in the settings")
+    imgui.Text("To toggle the damage log: Ctrl+Q by default, can be changed in the settings")
     imgui.Text("To access settings: right-click any *non-header* row in the window")
     imgui.Text("To hide/unhide columns: right-click any column header")
     imgui.Text("To rearrange columns: left-click and drag the column header")
