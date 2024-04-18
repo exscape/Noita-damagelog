@@ -98,7 +98,7 @@ function safe_serialize(s)
 end
 
 function safe_deserialize(s)
-    return smallfolk.loads((s:gsub([[@]], [["]])))
+    return smallfolk.loads((s:gsub([[@]], [["]])), 40000)
 end
 
 function store_damage_data(data, max_id)

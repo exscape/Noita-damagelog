@@ -39,7 +39,7 @@ dofile_once('data/scripts/debug/keycodes.lua')
 local gui_data = List.new()
 
 -- State that can't be directly affected by the player
-local initial_clear_completed = false
+local initial_setup_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
 local total_damage = 0
@@ -150,7 +150,7 @@ local fonts = {
 function format_time(time, lower_accuracy)
     local current_time = GameGetRealWorldTimeSinceStarted()
     local diff = math.floor(current_time - time)
-    if diff < 0 then
+    if time < 0 or diff < 0 then
         return "?"
     elseif (not lower_accuracy and diff < 1) or (lower_accuracy and diff < 3) then
         -- lower_accuracy is used by e.g. toxic sludge stains, so that the time
@@ -652,10 +652,6 @@ function update_gui_data()
         if damage_entry.damage > 0 then
             -- Exclude healing "damage" for this calculation
             total_damage = total_damage + damage_entry.damage
-
-            -- TODO: This feels excessive, but is it? I haven't been able to measure any performance issues from using globals heavily.
-            -- It's really only when on fire and similar that it really might matter, though, most damage is comparatively slow.
-            GlobalsSetValue("damagelog_total_damage", tostring(total_damage))
         end
     end
 
@@ -725,6 +721,20 @@ function handle_input_and_gui()
     end
 end
 
+-- Restore the saved data from this run when the game is restarted
+function load_saved_gui_data()
+    total_damage = tonumber(GlobalsGetValue("damagelog_total_damage", "0"))
+    gui_data = safe_deserialize(GlobalsGetValue("damagelog_saved_gui_data", safe_serialize(List.new())))
+
+    -- Clear all the stored times; they're stored as time since the game last started, so
+    -- they will be entirely invalid after a restart
+    for i = gui_data.first, gui_data.last do
+        gui_data[i].time = -1
+    end
+
+    update_gui_data()
+end
+
 function OnModInit()
     load_settings()
 
@@ -734,6 +744,12 @@ function OnModInit()
 end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
+    if is_paused then
+        -- Store the GUI data in case the player saves and exits
+        GlobalsSetValue("damagelog_total_damage", tostring(total_damage))
+        GlobalsSetValue("damagelog_saved_gui_data", safe_serialize(gui_data))
+    end
+
     if is_inventory_pause or display_gui_after_wand_pickup ~= nil then
         if is_paused then
             -- Picking up a wand. Always hide the GUI if it's shown, but show it again afterwards
@@ -741,6 +757,7 @@ function OnPausedChanged(is_paused, is_inventory_pause)
             display_gui_after_wand_pickup = display_gui
             display_gui = false
         else
+            -- Wand pickup is completed
             display_gui = display_gui_after_wand_pickup
             display_gui_after_wand_pickup = nil
         end
@@ -765,25 +782,14 @@ function OnPausePreUpdate()
 end
 
 function OnWorldPostUpdate()
-    if not initial_clear_completed then
-        -- Cleared for now to prevent serialization bugs to carry over between restarts.
-        -- This is called BEFORE OnWorldInitialized, where I initially tried to put it,
-        -- so while it sucks to check every single frame, I see no other option.
-        -- The OnMod*Init methods are called too early; GlobalSetValue isn't available yet.
-        -- TODO: If this is left out, the "time" column needs fixing!
-        -- TODO: Time is currently stored relative to the elapsed time since load, which of course
-        -- TODO: resets on load, so the times will be all wrong.
-        local empty_list = safe_serialize(List.new())
-        GlobalsSetValue("damagelog_damage_data", empty_list)
-        GlobalsSetValue("damagelog_highest_id_written", "0")
+    if not initial_setup_completed then
+        -- The last damage entry is still stored after processing.
+        -- Clear it now (or it will be duplicated in the GUI),
+        -- instead of doing this every time we take damage.
+        GlobalsSetValue("damagelog_damage_data", safe_serialize(List.new()))
 
-        -- This one should remain regardless.
-        -- Loaded only once per session, after that we just increase total_damage and save it
-        -- as a global again in case this run is continued later.
-        total_damage = tonumber(GlobalsGetValue("damagelog_total_damage", "0"))
-        update_gui_data()
-
-        initial_clear_completed = true
+        load_saved_gui_data()
+        initial_setup_completed = true
     end
 
     handle_input_and_gui()

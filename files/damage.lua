@@ -110,6 +110,12 @@ end
 -- Called by Noita every time the player takes damage
 -- Hook is initialized in init.lua
 function damage_received(damage, message, entity_thats_responsible, is_fatal, projectile_thats_responsible)
+    if next_hit_id == 1 then
+        -- The value starts at 1. Check if this is a continuation of a previous run (i.e. the player recently
+        -- loaded, and this is the first damage) so that we don't restart the ID counter and end up with duplicates.
+        next_hit_id = tonumber(GlobalsGetValue("damagelog_highest_id_written", "0")) + 1
+    end
+
     local source, damage_type = source_and_type_from_entity_and_message(entity_thats_responsible, message)
     damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
 
