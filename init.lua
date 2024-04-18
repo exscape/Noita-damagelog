@@ -42,6 +42,7 @@ local gui_data = List.new()
 local initial_clear_completed = false
 local last_imgui_warning_time = -3
 local player_spawn_time = 0
+local total_damage = 0
 local reset_window_settings = false -- window size/position will be cleared (once) if true
 local display_gui_after_wand_pickup = nil
 local display_gui = false
@@ -57,6 +58,7 @@ local _default_settings = {
     show_log_on_load = false,
     show_on_pause_screen = false,
     auto_show_hide_on_pause = false,
+    show_total_damage = false,
     activation_ctrl = true,
     activation_shift = false,
     activation_alt = false,
@@ -310,7 +312,14 @@ function draw_gui()
         window_flags = bit.bor(window_flags, imgui.WindowFlags.NoMouseInputs)
     end
 
-    window_shown, display_gui = imgui.Begin("Damage log", display_gui, window_flags)
+    local total_damage_string = ""
+    if get_setting("show_total_damage") then
+        total_damage_string = choice(gui_data.total_damage ~= nil, gui_data.total_damage, " (hitless)")
+    end
+
+    local window_title_and_id = "Damage log" .. total_damage_string .. "###damagelog"
+
+    window_shown, display_gui = imgui.Begin(window_title_and_id, display_gui, window_flags)
 
     if not window_shown then
         -- Window is collapsed
@@ -485,6 +494,9 @@ function draw_gui()
         open_on_pause_creator("Open/close damage log on pause/unpause")
         create_tooltip("Requires 'Show log on pause screen'.\nHandy way to check the log with no risk of getting killed!\nHowever, the log will also show over settings, the replay editor etc, which can't be prevented.")
 
+        local show_total_damage_creator = create_widget("show_total_damage", imgui.Checkbox)
+        show_total_damage_creator("Show total damage taken in the window title")
+
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         local activation_tooltip = "Any combination of Ctrl/Alt/Shift is allowed, including using none of them."
@@ -594,11 +606,6 @@ end
 function update_gui_data()
     local raw_damage_data = load_damage_data()
 
-    if List.length(raw_damage_data) < 1 then
-        error("damagelog: update_gui_data called with no new data!")
-        return
-    end
-
     -- Since damage.lua removes all previously read data prior to sending a new batch,
     -- we want to process everything we just received, and don't need to perform any
     -- kinds of checks here.
@@ -641,6 +648,21 @@ function update_gui_data()
             location = location,
             id = damage_entry.id
         })
+
+        if damage_entry.damage > 0 then
+            -- Exclude healing "damage" for this calculation
+            total_damage = total_damage + damage_entry.damage
+
+            -- TODO: This feels excessive, but is it? I haven't been able to measure any performance issues from using globals heavily.
+            -- It's really only when on fire and similar that it really might matter, though, most damage is comparatively slow.
+            GlobalsSetValue("damagelog_total_damage", tostring(total_damage))
+        end
+    end
+
+    if total_damage > 0 then
+        gui_data.total_damage = string.format(" (%s dmg total)", format_number(total_damage))
+    else
+        gui_data.total_damage = " (hitless)"
     end
 
     -- Clean up excessive entries
@@ -754,6 +776,13 @@ function OnWorldPostUpdate()
         local empty_list = safe_serialize(List.new())
         GlobalsSetValue("damagelog_damage_data", empty_list)
         GlobalsSetValue("damagelog_highest_id_written", "0")
+
+        -- This one should remain regardless.
+        -- Loaded only once per session, after that we just increase total_damage and save it
+        -- as a global again in case this run is continued later.
+        total_damage = tonumber(GlobalsGetValue("damagelog_total_damage", "0"))
+        update_gui_data()
+
         initial_clear_completed = true
     end
 
