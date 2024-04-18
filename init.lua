@@ -335,7 +335,8 @@ function draw_gui()
         choice(get_setting("show_grid_lines"), imgui.TableFlags.BordersInner, 0)
     )
 
-    imgui.BeginTable("Damage", 7, table_flags)
+    local num_columns = 7
+    imgui.BeginTable("Damage", num_columns, table_flags)
 
     -- Column setup + headers
     if font == 2 or font == 3 then
@@ -426,7 +427,7 @@ function draw_gui()
 
     -- Add popup to right-clicking on any of the columns (except the header)
     local is_any_column_hovered = false
-    for column = 0, 4 do
+    for column = 0, num_columns - 1 do
         if bit.band(imgui.TableGetColumnFlags(column), imgui.TableColumnFlags.IsHovered) ~= 0 then
             -- This is where I learned that 0 evaluates to true in Lua!
             is_any_column_hovered = true
