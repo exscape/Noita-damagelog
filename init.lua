@@ -55,7 +55,7 @@ local _default_settings = {
     -- Behavior
     auto_size_columns = true,
     show_log_on_load = false,
-    show_on_pause_screen = true,
+    show_on_pause_screen = false,
     auto_show_hide_on_pause = false,
     activation_ctrl = true,
     activation_shift = false,
@@ -473,7 +473,7 @@ function draw_gui()
             end
         )
         show_on_pause_screen_creator("Show log on pause screen")
-        create_tooltip("If false, the log (and settings/help) will be hidden when the game is paused.")
+        create_tooltip("When enabled, the log (and settings/help) will also show up when the game is paused.\nIt will unfortunately also show up over settings, the replay editor etc, which can't be prevented.")
 
         local open_on_pause_creator = create_widget("auto_show_hide_on_pause", imgui.Checkbox,
             function(setting, new_value)
@@ -483,7 +483,7 @@ function draw_gui()
             end
         )
         open_on_pause_creator("Open/close damage log on pause/unpause")
-        create_tooltip("Requires 'Show log on pause screen'.\nHandy way to check the log with no risk of getting killed!")
+        create_tooltip("Requires 'Show log on pause screen'.\nHandy way to check the log with no risk of getting killed!\nHowever, the log will also show over settings, the replay editor etc, which can't be prevented.")
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
