@@ -104,7 +104,7 @@ local function is_poolable(source, type)
     -- there's no good solution. We would need to check for the string "fire" in every language, then
     -- "acid" in every language, and so on, since Noita translates them prematurely.
     -- The second is more straightforward: if the SOURCE is a $damage string, it's from a stain or similar.
-    return type:sub(1,1) ~= '$' or source:sub(1,8) == "$damage_" or type == "$damage_healing"
+    return type:sub(1,1) ~= '$' or source:sub(1,8) == "$damage_" or type == "$damage_healing" or type == "$damage_plasmabeam"
 end
 
 -- Called by Noita every time the player takes damage
