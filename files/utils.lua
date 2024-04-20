@@ -1,4 +1,5 @@
 smallfolk = dofile_once("mods/damagelog/smallfolk/smallfolk.lua")
+dofile_once("mods/damagelog/files/list.lua")
 
 function dump(o)
     if type(o) == 'table' then
@@ -24,66 +25,50 @@ function choice(condition, if_true, if_false)
     if condition then return if_true else return if_false end
 end
 
------ Double ended queue implementation from https://www.lua.org/pil/11.4.html
-local List = {}
-function List.new ()
-    return {first = 0, last = -1}
+function format_time(time, lower_accuracy)
+    local current_time = GameGetRealWorldTimeSinceStarted()
+    local diff = math.floor(current_time - time)
+    if time < 0 or diff < 0 then
+        return "?"
+    elseif (not lower_accuracy and diff < 1) or (lower_accuracy and diff < 3) then
+        -- lower_accuracy is used by e.g. toxic sludge stains, so that the time
+        -- doesn't keep jumping between now -> 1s -> 2s -> now -> ... while stained
+        return "now"
+    elseif diff < 60 then
+        return string.format("%.0fs", diff)
+    elseif diff < 300 then
+        local min, sec = math.floor(diff / 60), math.floor(diff % 60)
+        return string.format("%.0fm %.0fs", min, sec)
+    elseif diff < 7200 then
+        -- Don't show seconds since it's mostly annoying at this point
+        return string.format("%.0fm", diff / 60)
+    else
+        local hr, min = math.floor(diff / 3600), math.floor((diff % 3600) / 60)
+        return string.format("%.0fh %.0fm", hr, min)
+    end
 end
 
-function List.pushleft (list, value)
-    local first = list.first - 1
-    list.first = first
-    list[first] = value
+-- Uses a simple human-readable format for only partially insane numbers (millions, billions).
+-- Reverts to scientific notation shorthand (e.g. 1.23e14) for the truly absurd ones.
+ function format_number(n)
+    if n < 1000000 then -- below 1 million, show as plain digits e.g. 987654
+        -- Format, and prevent string.format from rounding to 0
+        local formatted = string.format("%.0f", n)
+        if formatted == "0" and n > 0 then
+            formatted = "<1"
+        end
+        return formatted
+    elseif n < 1000000000 then
+        -- Below 1 billion, show as e.g. 123.4M
+        return string.format("%.4gM", n/1000000)
+    elseif n < 1000000000000 then
+        -- Below 1 trillion, show as e.g. 123.4B
+        return string.format("%.4gB", n/1000000000)
+    else
+        -- Format to exponent notation, and convert e.g. 1.3e+007 to 1.3e7
+        return (string.format("%.4g", n):gsub("e%+0*", "e"))
+    end
 end
-
-function List.pushright (list, value)
-    local last = list.last + 1
-    list.last = last
-    list[last] = value
-end
-
-function List.popleft (list)
-    local first = list.first
-    if first > list.last then error("list is empty") end
-    local value = list[first]
-    list[first] = nil        -- to allow garbage collection
-    list.first = first + 1
-    return value
-end
-
-function List.popright (list)
-    local last = list.last
-    if list.first > last then error("list is empty") end
-    local value = list[last]
-    list[last] = nil         -- to allow garbage collection
-    list.last = last - 1
-    return value
-end
-
---- Added by exscape
-function List.isempty (list)
-    return list.first > list.last
-end
-
---- Added by exscape
-function List.length (list)
-    return list.last - list.first + 1
-end
-
---- Added by exscape
-function List.peekleft (list)
-    local first = list.first
-    if first > list.last then error("list is empty") end
-    return list[first]
-end
-
---- Added by exscape
-function List.peekright (list)
-    local last = list.last
-    if list.first > last then error("list is empty") end
-    return list[last]
-end
------ End double ended queue implementation
 
 -- The wiki for GlobalsSetValue claims that:
 -- "Writing a string containing quotation marks can corrupt the `world_state.xml` save file."
@@ -123,6 +108,12 @@ function load_damage_data()
     return damage_data
 end
 
+function clamp(v, min, max)
+    if v < min then return min
+    elseif v > max then return max
+    else return v end
+end
+
 -- Ugly? Yes. But Lua doesn't support these characters for string.upper
 -- This is a complete list of the non-ASCII characters used as a first letter in Noita as of this writing,
 -- except for Chinese/Japanese/Korean, which we can't display anyway due to a lack of supported fonts.
@@ -137,11 +128,3 @@ function initialupper(s)
         return (s:gsub("^%l", string.upper))
     end
 end
-
-function clamp(v, min, max)
-    if v < min then return min
-    elseif v > max then return max
-    else return v end
-end
-
-return { ["List"] = List }
