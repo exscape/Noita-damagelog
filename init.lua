@@ -197,6 +197,11 @@ function load_saved_gui_data()
     update_gui_data()
 end
 
+function save_gui_data()
+    GlobalsSetValue("damagelog_total_damage", tostring(gui_state.raw_total_damage))
+    GlobalsSetValue("damagelog_saved_gui_data", safe_serialize(gui_state.data))
+end
+
 function OnModInit()
     load_settings()
 
@@ -205,9 +210,8 @@ end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
     if is_paused then
-        -- Store the GUI data in case the player saves and exits
-        GlobalsSetValue("damagelog_total_damage", tostring(gui_state.raw_total_damage))
-        GlobalsSetValue("damagelog_saved_gui_data", safe_serialize(gui_state.data))
+        -- Store the GUI data here in case the player saves and exits
+        save_gui_data()
     end
 
     if is_inventory_pause or display_gui_after_wand_pickup ~= nil then

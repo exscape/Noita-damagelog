@@ -1,5 +1,7 @@
 List = {}
 
+-- Double-ended queue implementation from https://www.lua.org/pil/11.4.html
+
 function List.new ()
     return {first = 0, last = -1}
 end

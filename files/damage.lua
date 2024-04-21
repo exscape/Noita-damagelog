@@ -50,12 +50,12 @@ end
 local function get_player_health()
     local player = get_player_entity()
     if player == nil then
-        return 0
+        return 0, 0
     end
 
     local damagemodels = EntityGetComponent(player, "DamageModelComponent")
     if damagemodels == nil or #damagemodels < 1 then
-        return 0
+        return 0, 0
     end
 
     return tonumber(ComponentGetValue2(damagemodels[1], "hp")) * 25,
