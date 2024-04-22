@@ -37,6 +37,12 @@ This is on a fairly high-end CPU though (Ryzen 5800X3D); a weaker CPU with 50-60
 
 I haven't been able to measure any performance cost at all when the GUI is not showing, so it should be very small.
 
+# Additional mod suggestions
+
+Aside from the NoitaDearImGui mod that's required, I also use [Enemy Names Translated](https://steamcommunity.com/sharedfiles/filedetails/?id=2024025283), which is nice if you haven't memorized the Finnish names (or speak Finnish, of course). (There's also a [Complete English](https://steamcommunity.com/workshop/filedetails/?id=3059530047) mod.)
+
+I also use [Disable Mod Restrictions](https://modworkshop.net/mod/38530) because I really don't feel that this mod nor the Dear ImGui mod count as cheating in any way, so being without records/stats and achievements is rather boring.
+
 # Known issues
 
 If the setting to show the log when paused is enabled, it will also show up over the settings menu, over the replay editor, and so on. I don't believe Noita allows a mod to tell if these are active or not. (If anyone has a fix, please contact me!)  

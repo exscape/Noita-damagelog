@@ -42,7 +42,7 @@ dofile_once("mods/damagelog/files/gui.lua")
     otherwise, we would need to pass large amounts of data back and forth every time we get damaged (or even every frame).
 ]]
 
--- Initialized in gui.lua:init_gui() -- should be nil, but to prevent incorrect warnings/unnecessary nil checks, let's initialize it here too
+-- Initialized in OnModInit -- should be nil, but to prevent incorrect warnings/unnecessary nil checks, let's initialize it here too
 local gui_state = {}
 
 -- State that can't be directly affected by the player
