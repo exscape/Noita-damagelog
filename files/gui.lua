@@ -237,39 +237,54 @@ function draw_gui()
 
     for row = first_index, gui_state.data.last do
         imgui.TableNextRow()
+        local row_data = gui_state.data[row]
 
         imgui.TableNextColumn()
-        imgui.Text(gui_state.data[row].location)
+        imgui.Text(row_data.location)
 
         imgui.TableNextColumn()
-        imgui.Text(gui_state.data[row].source)
+        imgui.Text(row_data.source)
 
         imgui.TableNextColumn()
-        imgui.Text(gui_state.data[row].type)
+        imgui.Text(row_data.type)
 
         imgui.TableNextColumn()
-        local is_healing, damage = unpack(gui_state.data[row].damage)
-        if is_healing then
-            imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage)
+
+        local num_hits = #row_data.hits
+        local damage_text = row_data.damage_text
+        if num_hits > 1 and get_setting("highlight_combined_asterisk") then
+            damage_text = damage_text .. "*"
+        end
+        if row_data.total_damage < 0 then
+            -- Healing, show in green
+            imgui.TextColored(0.25, 0.8, 0.25, 1.0, damage_text)
+        elseif num_hits > 1 and get_setting("highlight_combined_red") then
+            -- Combined hits w/ highlight
+            imgui.TextColored(0.8, 0.25, 0.25, 1.0, damage_text)
         else
-            imgui.Text(damage)
+            -- Standard hit
+            imgui.Text(damage_text)
+        end
+
+        if row_data.damage_tooltip then
+            -- Used when there are multiple hits
+            create_tooltip(row_data.damage_tooltip)
         end
 
         imgui.TableNextColumn()
-        imgui.Text(gui_state.data[row].hp)
+        imgui.Text(row_data.hp)
 
         imgui.TableNextColumn()
-        imgui.Text(gui_state.data[row].max_hp)
+        imgui.Text(row_data.max_hp)
 
         -- So this is unfortunately very hacky.
         -- To keep the GUI time updated in most cases while also not jumping back between
         -- now -> 1s -> 2s -> now -> ... for some pooled damage, we need to use an exception
         -- for such damage. There may be more exceptions than these that should be added.
         -- TODO: ensure this works with non-English languages used in Noita
-        local s = gui_state.data[row].source
-        local lower_accuracy = s == "Toxic sludge" or s == "Poison"
+        local lower_accuracy = row_data.source == "Toxic sludge" or row_data.source == "Poison"
         imgui.TableNextColumn()
-        imgui.Text(format_time(gui_state.data[row].time, lower_accuracy))
+        imgui.Text(format_time(row_data.time, lower_accuracy))
     end
 
     -- Add popup to right-clicking on any of the columns (except the header)
@@ -334,6 +349,24 @@ function draw_gui()
 
         local show_total_damage_creator = create_widget("show_total_damage", imgui.Checkbox)
         show_total_damage_creator("Show total damage taken in the window title")
+
+        imgui.Dummy(0, spacing_size * imgui.GetFontSize())
+
+        local combine_hits_creator = create_widget("combine_similar_hits", imgui.Checkbox)
+        combine_hits_creator("Combine similar, near-simultaneous hits into a single row")
+        create_tooltip("Show e.g. the 4 hits of a Hiisi shotgunner as one row of 28, instead of 4 rows of 7.\n" ..
+                       "Mouse over the damage text to show the individual hits.\n" ..
+                       "Some rounding issues can occur, e.g. 2 x 6.4 damage shows as \"2x6\" but the total rounds to 13.")
+
+        imgui.Indent()
+
+        local combine_hits_highlight_asterisk = create_widget("highlight_combined_asterisk", imgui.Checkbox)
+        combine_hits_highlight_asterisk("Highlight combined hits with an asterisk")
+
+        local combine_hits_highlight_red = create_widget("highlight_combined_red", imgui.Checkbox)
+        combine_hits_highlight_red("Highlight combined hits in red")
+
+        imgui.Unindent()
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 

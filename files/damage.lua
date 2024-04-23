@@ -97,7 +97,7 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
     end
 end
 
-local function is_poolable(source, type)
+local function should_always_pool(source, type)
     local additional_poolable_types = { ["$damage_healing"] = 1, ["$damage_plasmabeam"] = 1, ["$damage_orb_blood"] = 1}
     -- The first check might need some explaining.
     -- Noita sends "damage from material: XYZ" as message for e.g. lava, poison droplets (not poison STAINS)
@@ -152,7 +152,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         max_hp = max_hp,
         time = GameGetRealWorldTimeSinceStarted(),
         frame = GameGetFrameNum(),
-        is_poolable = is_poolable(source, damage_type),
+        always_pool = should_always_pool(source, damage_type), -- true if this is a damage type that repeats quickly, like fire/toxic sludge/poison
         location = current_biome,
         id = next_hit_id,
     })

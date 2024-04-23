@@ -50,7 +50,10 @@ local initial_setup_completed = false
 local last_imgui_warning_time = -3
 local display_gui_after_wand_pickup = nil
 
-local function should_pool_damage(source, type)
+-- Used to check if damage should be added together and shown as one number,
+-- such as for fire (60 times/second!), toxic sludge, poison and some others.
+-- Also used for combining near-simultaneous hits (which preserves individual hit info).
+local function should_pool_damage(source, type, max_frame_diff)
     if List.isempty(gui_state.data) then return false end
     local prev = List.peekright(gui_state.data)
 
@@ -59,7 +62,47 @@ local function should_pool_damage(source, type)
     end
 
     local frame_diff = GameGetFrameNum() - prev.frame
-    return frame_diff < 120
+    return frame_diff < (max_frame_diff or 120)
+end
+
+local function format_damage_tooltip(hits)
+    -- Given a set of hits, formats a tooltip to show in the UI.
+    -- For example: {5.4, 6.89, 5.25, 7.25, 4.13, 4.73} rounds to {5, 7, 5, 7, 4, 5} which formats as "2x7, 3x5, 4"
+    -- This is fairly complex... we can't sort on the formatted numbers (since "2" > "11" etc), but
+    -- we also can't group on the non-formatted numbers (since we want e.g. 6.8 and 7.1 to group together).
+    local hit_pairs = {}
+    for i = 1, #hits do
+        hit_pairs[i] = { hits[i], format_number(hits[i]) }
+    end
+
+    -- Sort by highest damage (per hit, not total, so 2x7 comes before 3x5)
+    table.sort(hit_pairs, function(a, b) return b[1] < a[1] end )
+
+    -- Group similar hits (hits that format to the same number) as a list of { count, value } pairs
+    local groups = {}
+    local i = 1
+    while i <= #hit_pairs do
+        local count = 1
+        while hit_pairs[i+1] ~= nil and hit_pairs[i+1][2] == hit_pairs[i][2] do
+            count = count + 1
+            i = i + 1
+        end
+        table.insert(groups, { count, hit_pairs[i][2] })
+        i = i + 1
+    end
+
+    -- Finally, convert to an output string
+    -- Not very optimized, but should be fine with such short strings
+    local out = ""
+    for _, v in ipairs(groups) do
+        if v[1] == 1 then
+            out = out .. string.format("%s, ", v[2])
+        else
+            out = out .. string.format("%dx%s, ", v[1], v[2])
+        end
+    end
+
+    return out:sub(1, #out - 2)
 end
 
 --- Convert the damage data to what we want to display.
@@ -94,15 +137,34 @@ function update_gui_data()
         -- if the last damage entry was from the same source *AND* it was recent.
         -- Note that this uses popright to remove the previous row entirely.
         local pooled_damage = 0
-        if damage_entry.is_poolable and should_pool_damage(source, type) then
-            pooled_damage = List.popright(gui_state.data).raw_damage
+        local hits = {}
+        local damage_tooltip = nil
+        if damage_entry.always_pool and should_pool_damage(source, type) then
+            -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
+            -- Separate hits are not stored (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
+            pooled_damage = List.popright(gui_state.data).total_damage
+        elseif get_setting("combine_similar_hits") and should_pool_damage(source, type, 45) then
+            -- We might still want to combine this with the previous hit, and show them as a single row.
+            -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
+            -- Allow combining those hits if the user wishes. Each hit is stored and viewable separately.
+            local prev = List.popright(gui_state.data)
+            hits = prev.hits
+            pooled_damage = prev.total_damage
+        end
+
+        table.insert(hits, damage_entry.damage)
+
+        if #hits > 1 then
+            damage_tooltip = format_damage_tooltip(hits)
         end
 
         List.pushright(gui_state.data, {
             source = source,
             type = type,
-            damage = { damage_entry.damage < 0, format_number(damage_entry.damage + pooled_damage) },
-            raw_damage = damage_entry.damage + pooled_damage,
+            damage_text = format_number(damage_entry.damage + pooled_damage),
+            total_damage = damage_entry.damage + pooled_damage,
+            hits = hits,
+            damage_tooltip = damage_tooltip,
             hp = format_number(damage_entry.hp),
             max_hp = format_number(damage_entry.max_hp),
             time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
