@@ -18,6 +18,9 @@ function init_gui()
     -- Also reset once they've toggled the window with the activation hotkey.
     gui_state.display_gui = get_setting("show_log_on_load") or get_setting("force_show_on_load")
 
+    -- There doesn't seem to be a GameIsPaused or similar, so let's make one
+    gui_state.is_paused = false
+
     return gui_state
 end
 
@@ -147,7 +150,7 @@ function draw_gui()
     end
 
     local window_flags = imgui.WindowFlags.AlwaysAutoResize
-    if get_setting("ignore_mouse_input") then
+    if get_setting("ignore_mouse_input") and not gui_state.is_paused then
         window_flags = bit.bor(window_flags, imgui.WindowFlags.NoMouseInputs)
     end
 

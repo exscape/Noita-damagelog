@@ -271,6 +271,8 @@ function OnModInit()
 end
 
 function OnPausedChanged(is_paused, is_inventory_pause)
+    gui_state.is_paused = is_paused
+
     if is_paused then
         -- Store the GUI data here in case the player saves and exits
         save_gui_data()

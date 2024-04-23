@@ -16,7 +16,7 @@ mod_settings =
         settings = {
             {
                 id = "ignore_mouse_input",
-                ui_name = "Click-through / ignore all(!) mouse input",
+                ui_name = "Click-through / ignore all(!) mouse input (unless paused)",
                 ui_description = "ALL mouse input is ignored and sent to Noita instead,\n" ..
                     "including right-clicks, window moves, etc.\n" ..
                     "Must be disabled here again to allow setting changes.\n\n" ..
