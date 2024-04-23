@@ -1,5 +1,7 @@
 imgui = load_imgui({version="1.17.0", mod="damagelog"})
 
+dofile_once('data/scripts/debug/keycodes.lua')
+
 local fonts = {
     {"Noita Pixel", imgui.GetNoitaFont()},
     {"Noita Pixel 1.4x", imgui.GetNoitaFont1_4x()},
@@ -150,7 +152,9 @@ function draw_gui()
     end
 
     local window_flags = imgui.WindowFlags.AlwaysAutoResize
-    if get_setting("ignore_mouse_input") and not gui_state.is_paused then
+    if get_setting("ignore_mouse_input") and
+       not gui_state.is_paused and
+       not (InputIsKeyDown(Key_LCTRL) and InputIsKeyDown(Key_LALT)) then
         window_flags = bit.bor(window_flags, imgui.WindowFlags.NoMouseInputs)
     end
 
@@ -431,8 +435,8 @@ function draw_gui()
         imgui.SeparatorText("Advanced")
 
         imgui.Text([[Mouse click-through can be enabled in Noita's "Mod Settings" menu.]])
-        imgui.Text([[When enabled, accessing this window is impossible,]])
-        imgui.Text([[so it must be disabled again to change other settings.]])
+        imgui.Text([[When the left ctrl and alt keys are held, mouse input is always accepted,]])
+        imgui.Text([[even when the click-through setting is enabled.]])
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         ---------------- End of settings ----------------

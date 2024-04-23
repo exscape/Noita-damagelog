@@ -19,9 +19,9 @@ mod_settings =
                 ui_name = "Click-through / ignore all(!) mouse input (unless paused)",
                 ui_description = "ALL mouse input is ignored and sent to Noita instead,\n" ..
                     "including right-clicks, window moves, etc.\n" ..
-                    "Must be disabled here again to allow setting changes.\n\n" ..
                     "Nice to have if you want the window always visible,\n" ..
-                    "to avoid accidental clicks when attacking.",
+                    "to avoid accidental clicks when attacking.\n" ..
+                    "Hold left Ctrl + left Alt to temporarily allow mouse input!",
                 value_default = false,
                 scope = MOD_SETTING_SCOPE_RUNTIME,
             },

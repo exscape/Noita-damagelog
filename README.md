@@ -23,7 +23,8 @@ Once you return to the game, it should show up, and let you set it up the way yo
 
 Yes! Right-click any row in the damage log, i.e. not the table header or the window titlebar.
 
-One setting (mouse click-through) is only available in the Noita "Mod Settings" menu, since it would be impossible to change back in the standard settings.
+One setting (mouse click-through) is only available in the Noita "Mod Settings" menu, to avoid the risk of getting "locked out".  
+However, holding the left Ctrl + left Alt keys will make the window temporarily accept mouse input even when this setting is enabled.
 
 ## The damage log is very small!
 
