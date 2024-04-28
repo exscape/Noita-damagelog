@@ -335,7 +335,7 @@ function draw_gui()
         if imgui.RadioButton("Auto-size columns to fit", auto_size_columns) then
             set_setting("auto_size_columns", true)
         end
-        if imgui.RadioButton("Manual sizing (click divider + drag).", not auto_size_columns) then
+        if imgui.RadioButton("Manual sizing (click divider + drag)", not auto_size_columns) then
             set_setting("auto_size_columns", false)
         end
         create_tooltip("Column sizes will be remembered when manual sizing is enabled.")
