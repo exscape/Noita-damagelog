@@ -124,7 +124,9 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     local hp_after = clamp(hp - damage, 0, max_hp)
     max_hp = clamp(math.floor(max_hp), 1, max_hp) -- Noita seems to floor prior to displaying it
 
-    if hp_after < 1 then
+    if hp_after <= 0 then
+        hp_after = 0
+    elseif hp_after < 1 then
         hp_after = 1
     else
         -- The game GUI seems to do this; our display can show 1 hp extra without flooring first
