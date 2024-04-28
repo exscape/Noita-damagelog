@@ -1,4 +1,4 @@
-smallfolk = dofile_once("mods/damagelog/smallfolk/smallfolk.lua")
+smallfolk = dofile_once("mods/damagelog/files/smallfolk/smallfolk.lua")
 dofile_once("mods/damagelog/files/list.lua")
 
 function dump(o)
