@@ -3,7 +3,15 @@
 damagelog is a Noita mod that shows a list of the the damage you've taken.  
 It should work on the main branch of Noita (no earlier than April 8 2024, however!) and the beta branch.
 
+![Standard layout](screenshot_log.png)
+
 There's a fair amount of settings you can customize.
+
+![Settings](screenshot_settings.png)
+
+Here's a screenshot with all columns active. (Columns are toggled by right-clicking the column header, and reordered by clicking and dragging in the header.)
+
+![All headers](screenshot_all_columns.png)
 
 ## Initial setup
 
