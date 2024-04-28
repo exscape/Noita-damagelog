@@ -1,14 +1,23 @@
-imgui = load_imgui({version="1.17.0", mod="damagelog"})
+-- This can't be a local as init.lua checks for it
+imgui = nil
+if load_imgui ~= nil then
+    -- Prevent Lua error when the mod isn't available
+    -- Actual error reporting to the user is in the callbacks far below
+    imgui = load_imgui({version="1.17.0", mod="damagelog"})
+end
 
 dofile_once('data/scripts/debug/keycodes.lua')
 
-local fonts = {
-    {"Noita Pixel", imgui.GetNoitaFont()},
-    {"Noita Pixel 1.4x", imgui.GetNoitaFont1_4x()},
-    {"Noita Pixel 1.8x", imgui.GetNoitaFont1_8x()},
-    {"ImGui (Proggy Clean)", imgui.GetImGuiFont()},
-    {"Source Code Pro", imgui.GetMonospaceFont()},
-}
+local fonts
+if imgui then
+    fonts = {
+        {"Noita Pixel", imgui.GetNoitaFont()},
+        {"Noita Pixel 1.4x", imgui.GetNoitaFont1_4x()},
+        {"Noita Pixel 1.8x", imgui.GetNoitaFont1_8x()},
+        {"ImGui (Proggy Clean)", imgui.GetImGuiFont()},
+        {"Source Code Pro", imgui.GetMonospaceFont()},
+    }
+end
 
 local gui_state = {}
 
@@ -81,6 +90,7 @@ function draw_help_window()
     imgui.Dummy(0, imgui.GetFontSize())
 
     imgui.Text("To toggle the damage log: Ctrl+Q by default, can be changed in the settings")
+    imgui.Text("To move the window: click and drag the titlebar")
     imgui.Text("To access settings: right-click any *non-header* row in the window")
     imgui.Text("To hide/unhide columns: right-click any column header")
     imgui.Text("To rearrange columns: left-click and drag the column header")
@@ -88,7 +98,7 @@ function draw_help_window()
 
     imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
-    imgui.Text([[Note that the "location" and "max hp" columns are hidden by default.]])
+    imgui.Text([[Note that the "Location" and "Max HP" columns are hidden by default.]])
 
     imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
@@ -418,7 +428,7 @@ function draw_gui()
 
         local max_rows_to_show_creator = create_widget("max_rows_to_show", imgui.SliderInt)
         max_rows_to_show_creator("Max rows to show", 1, max_rows_allowed)
-        create_tooltip("The log will resize as you take damage, but never above this number of rows.")
+        create_tooltip("The log will resize as you take damage, up to this number of rows.")
 
         local show_grid_lines_creator = create_widget("show_grid_lines", imgui.Checkbox)
         show_grid_lines_creator("Show grid lines")
