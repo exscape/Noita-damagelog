@@ -32,6 +32,9 @@ function init_gui()
     -- There doesn't seem to be a GameIsPaused or similar, so let's make one
     gui_state.is_paused = false
 
+    -- Actually set in init.lua, but having a non-nil value prior to that saves us a bunch of checks
+    gui_state.player_spawn_time = 0
+
     return gui_state
 end
 
