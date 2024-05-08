@@ -73,6 +73,8 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
     -- the untranslated string as in every other case.
     -- This seems to work fine in every latin language, and Russian; the others can't be displayed by
     -- Dear ImGui with the fonts we have anyway, so there's not a lot I can do for the other languages.
+    local orig_message = message
+
     if damage_from_material_prefix == nil then
         damage_from_material_prefix = GameTextGet("$damage_frommaterial") or "damage from material: $0"
         damage_from_material_prefix = (damage_from_material_prefix:gsub("$0", ""))
@@ -85,7 +87,18 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
 
     if entity_thats_responsible ~= 0 then
         -- Show the responsible entity if one exists
-        return get_entity_name(entity_thats_responsible), damage_type
+        local entity_name = get_entity_name(entity_thats_responsible)
+
+        -- This is terribly ugly, but I'm not sure there's a better way.
+        -- For whatever reason, Noita now returns $biome_holymountain as the entity
+        -- that causes "cursed area" damage (e.g. when digging towards a PW).
+        -- That causes every other row in the log to be "Holy Mountain" and every other
+        -- to be "Cursed rock", spamming the log with maybe 15-20 rows per second.
+        if entity_name == '$biome_holymountain' and orig_message == '$damage_rock_curse' then
+            return orig_message, orig_message
+        end
+
+        return entity_name, damage_type
     elseif message:sub(1,1) == "$" or damage_was_from_material then
         -- No responsible entity; damage is something like toxic sludge, fire etc.
         -- Show that as the source and type.
