@@ -103,7 +103,11 @@ function load_damage_data()
         max_id = List.peekright(damage_data).id
     end
 
-    GlobalsSetValue("damagelog_highest_id_read", tostring(max_id))
+    if max_id ~= 0 then
+        -- max_id will be 0 from when you start (after load or new game) until you take damage,
+        -- so don't reset highest_id_read, or update_gui_data will run every frame for no reason
+        GlobalsSetValue("damagelog_highest_id_read", tostring(max_id))
+    end
 
     return damage_data
 end

@@ -228,11 +228,7 @@ function handle_input_and_gui()
         end
     end
 
-    local highest_id_read = 0
-    if not List.isempty(gui_state.data) then
-        highest_id_read = List.peekright(gui_state.data).id
-    end
-
+    local highest_id_read = tonumber(GlobalsGetValue("damagelog_highest_id_read", "0"))
     local highest_id_written = tonumber(GlobalsGetValue("damagelog_highest_id_written", "0"))
     if highest_id_written > highest_id_read then
         update_gui_data()
