@@ -11,6 +11,7 @@ local _default_settings = {
     show_on_pause_screen = false,
     auto_show_hide_on_pause = false,
     show_total_damage = false,
+    log_healing = false,
     activation_ctrl = true,
     activation_shift = false,
     activation_alt = false,

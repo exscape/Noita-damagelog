@@ -117,65 +117,67 @@ function update_gui_data()
     for i = raw_damage_data.first, raw_damage_data.last do
         local damage_entry = raw_damage_data[i]
 
-        local source = damage_entry.source
-        local type = damage_entry.type
-        if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
-        if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+        if damage_entry.damage >= 0 or get_setting("log_healing") then
+            local source = damage_entry.source
+            local type = damage_entry.type
+            if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
+            if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
 
-        local location
-        if damage_entry.location:sub(1, 1) == '$' then
-            location = GameTextGet(damage_entry.location)
-        else
-            location = damage_entry.location
-        end
+            local location
+            if damage_entry.location:sub(1, 1) == '$' then
+                location = GameTextGet(damage_entry.location)
+            else
+                location = damage_entry.location
+            end
 
-        source = initialupper(source)
-        type = initialupper(type)
-        location = initialupper(location)
+            source = initialupper(source)
+            type = initialupper(type)
+            location = initialupper(location)
 
-        -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
-        -- if the last damage entry was from the same source *AND* it was recent.
-        -- Note that this uses popright to remove the previous row entirely.
-        local pooled_damage = 0
-        local hits = {}
-        local damage_tooltip = nil
-        if damage_entry.always_pool and should_pool_damage(source, type) then
-            -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
-            -- Separate hits are not stored (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
-            pooled_damage = List.popright(gui_state.data).total_damage
-        elseif get_setting("combine_similar_hits") and should_pool_damage(source, type, 45) then
-            -- We might still want to combine this with the previous hit, and show them as a single row.
-            -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
-            -- Allow combining those hits if the user wishes. Each hit is stored and viewable separately.
-            local prev = List.popright(gui_state.data)
-            hits = prev.hits
-            pooled_damage = prev.total_damage
-        end
+            -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
+            -- if the last damage entry was from the same source *AND* it was recent.
+            -- Note that this uses popright to remove the previous row entirely.
+            local pooled_damage = 0
+            local hits = {}
+            local damage_tooltip = nil
+            if damage_entry.always_pool and should_pool_damage(source, type) then
+                -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
+                -- Separate hits are not stored (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
+                pooled_damage = List.popright(gui_state.data).total_damage
+            elseif get_setting("combine_similar_hits") and should_pool_damage(source, type, 45) then
+                -- We might still want to combine this with the previous hit, and show them as a single row.
+                -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
+                -- Allow combining those hits if the user wishes. Each hit is stored and viewable separately.
+                local prev = List.popright(gui_state.data)
+                hits = prev.hits
+                pooled_damage = prev.total_damage
+            end
 
-        table.insert(hits, damage_entry.damage)
+            table.insert(hits, damage_entry.damage)
 
-        if #hits > 1 then
-            damage_tooltip = format_damage_tooltip(hits)
-        end
+            if #hits > 1 then
+                damage_tooltip = format_damage_tooltip(hits)
+            end
 
-        List.pushright(gui_state.data, {
-            source = source,
-            type = type,
-            damage_text = format_number(damage_entry.damage + pooled_damage),
-            total_damage = damage_entry.damage + pooled_damage,
-            hits = hits,
-            damage_tooltip = damage_tooltip,
-            hp = format_number(damage_entry.hp),
-            max_hp = format_number(damage_entry.max_hp),
-            time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
-            frame = damage_entry.frame,
-            location = location,
-            id = damage_entry.id
-        })
+            List.pushright(gui_state.data, {
+                source = source,
+                type = type,
+                damage_text = format_number(damage_entry.damage + pooled_damage),
+                total_damage = damage_entry.damage + pooled_damage,
+                hits = hits,
+                damage_tooltip = damage_tooltip,
+                hp = format_number(damage_entry.hp),
+                max_hp = format_number(damage_entry.max_hp),
+                time = math.floor(damage_entry.time), -- Formatted on display. floor() to make them all update in sync
+                frame = damage_entry.frame,
+                location = location,
+                id = damage_entry.id
+            })
 
-        if damage_entry.damage > 0 then
-            -- Exclude healing "damage" for this calculation
-            gui_state.raw_total_damage = gui_state.raw_total_damage + damage_entry.damage
+            if damage_entry.damage > 0 then
+                -- Exclude healing "damage" for this calculation
+                gui_state.raw_total_damage = gui_state.raw_total_damage + damage_entry.damage
+            end
         end
     end
 

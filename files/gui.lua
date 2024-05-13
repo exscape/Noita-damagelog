@@ -370,6 +370,12 @@ function draw_gui()
         local show_total_damage_creator = create_widget("show_total_damage", imgui.Checkbox)
         show_total_damage_creator("Show total damage taken in the window title")
 
+        local log_healing_creator = create_widget("log_healing", imgui.Checkbox)
+        log_healing_creator("Log healing (see tooltip)")
+        create_tooltip("Logs healing from negative damage hits like Healing Bolt only.\n" ..
+                       "Healing from Deadly Heal, Circle of Vigour, full heal pickups etc.\n" ..
+                       "won't be shown, as Noita doesn't notify the mod of such healing.")
+
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
         local combine_hits_creator = create_widget("combine_similar_hits", imgui.Checkbox)
