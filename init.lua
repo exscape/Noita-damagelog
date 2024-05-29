@@ -65,7 +65,7 @@ local function fetch_pooling_entry(source, type, max_frame_diff)
     -- Note to self: keep in mind this checks 4 rows, not 3 (last, last-1, last-2, last-3)
     for i = gui_state.data.last, math.max(gui_state.data.first, gui_state.data.last - 3), -1 do
         local row = gui_state.data[i]
-        if row.source == source and row.type == type then
+        if row.source == source and (row.type == type or get_setting("combine_different_types")) then
             local frame_diff = GameGetFrameNum() - row.frame
             if frame_diff < (max_frame_diff or 120) then
                 List.pop_at(gui_state.data, i)
@@ -78,43 +78,57 @@ local function fetch_pooling_entry(source, type, max_frame_diff)
 end
 
 local function format_damage_tooltip(hits)
+    -- Exit early if empty
+    if next(hits) == nil then
+        return nil
+    end
+
+    local function format_one_type(hits_of_type)
     -- Given a set of hits, formats a tooltip to show in the UI.
     -- For example: {5.4, 6.89, 5.25, 7.25, 4.13, 4.73} rounds to {5, 7, 5, 7, 4, 5} which formats as "2x7, 3x5, 4"
     -- This is fairly complex... we can't sort on the formatted numbers (since "2" > "11" etc), but
     -- we also can't group on the non-formatted numbers (since we want e.g. 6.8 and 7.1 to group together).
-    local hit_pairs = {}
-    for i = 1, #hits do
-        hit_pairs[i] = { hits[i], format_number(hits[i]) }
-    end
+        local hit_pairs = {}
+        for i = 1, #hits_of_type do
+            hit_pairs[i] = { hits_of_type[i], format_number(hits_of_type[i]) }
+        end
 
-    -- Sort by highest damage (per hit, not total, so 2x7 comes before 3x5)
-    table.sort(hit_pairs, function(a, b) return b[1] < a[1] end )
+        -- Sort by highest damage (per hit, not total, so 2x7 comes before 3x5)
+        table.sort(hit_pairs, function(a, b) return b[1] < a[1] end )
 
-    -- Group similar hits (hits that format to the same number) as a list of { count, value } pairs
-    local groups = {}
-    local i = 1
-    while i <= #hit_pairs do
-        local count = 1
-        while hit_pairs[i+1] ~= nil and hit_pairs[i+1][2] == hit_pairs[i][2] do
-            count = count + 1
+        -- Group similar hits (hits that format to the same number) as a list of { count, value } pairs
+        local groups = {}
+        local i = 1
+        while i <= #hit_pairs do
+            local count = 1
+            while hit_pairs[i+1] ~= nil and hit_pairs[i+1][2] == hit_pairs[i][2] do
+                count = count + 1
+                i = i + 1
+            end
+            table.insert(groups, { count, hit_pairs[i][2] })
             i = i + 1
         end
-        table.insert(groups, { count, hit_pairs[i][2] })
-        i = i + 1
-    end
 
-    -- Finally, convert to an output string
-    -- Not very optimized, but should be fine with such short strings
-    local out = ""
-    for _, v in ipairs(groups) do
-        if v[1] == 1 then
-            out = out .. string.format("%s, ", v[2])
-        else
-            out = out .. string.format("%dx%s, ", v[1], v[2])
+        -- Finally, convert to an output string
+        -- Not very optimized, but should be fine with such short strings
+        local out = ""
+        for _, v in ipairs(groups) do
+            if v[1] == 1 then
+                out = out .. string.format("%s, ", v[2])
+            else
+                out = out .. string.format("%dx%s, ", v[1], v[2])
+            end
         end
+
+        return out:sub(1, #out - 2)
     end
 
-    return out:sub(1, #out - 2)
+    tooltip = ""
+    for type, hits_of_type in pairs(hits) do
+        tooltip = tooltip .. type .. ": " .. format_one_type(hits_of_type) .. "\n"
+    end
+
+    return tooltip:sub(1, #tooltip - 1) -- Remove trailing newline
 end
 
 --- Convert the damage data to what we want to display.
@@ -146,43 +160,58 @@ function update_gui_data()
             type = initialupper(type)
             location = initialupper(location)
 
+            local display_type = type
+
             -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
             -- if the last damage entry was from the same source *AND* it was recent.
             -- Note that the previous entry is removed by the fetch method; we simply add it back later.
             local pooled_damage = 0
             local hits = {}
             local damage_tooltip = nil
-            if damage_entry.always_pool then
-                -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
-                -- Separate hits are not stored (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
-                local source_entry = fetch_pooling_entry(source, type)
 
-                if source_entry ~= nil then
-                    pooled_damage = source_entry.total_damage
+            -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
+            -- Also checks for damage to combine (like multiple hits from a Hiisi shotgunner).
+            -- Separate hits are not stored for some damage (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
+            -- However, the entire sum is stored as a single hit, to prevent weirdness in some cases (like Omega Sawblade).
+            -- For most damage, each hit is stored separately (see code below).
+            local source_entry = fetch_pooling_entry(source, type, choice(damage_entry.always_pool, 120, 90))
+
+            if source_entry ~= nil then
+                -- Pool/combine this damage into a single row.
+                -- The fetch function removed the old entry, so we create a new one (with some info from the old one) and add it.
+                hits = source_entry.hits
+                pooled_damage = source_entry.total_damage
+                if source_entry.type ~= type then
+                    display_type = "Multiple" -- TODO: Translation? Use some form of symbols instead of language?
                 end
+            end
+
+            if hits[type] == nil then
+                -- First hit of this type
+                hits[type] = {damage_entry.damage}
+            elseif damage_entry.always_pool then
+                -- Don't store each "hit" separately; instead, increase value of the one that already exists
+                hits[type][1] = hits[type][1] + damage_entry.damage
             else
-                -- We might still want to combine this with the previous hit, and show them as a single row.
-                -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
-                local source_entry = fetch_pooling_entry(source, type, 45)
-
-                if source_entry ~= nil then
-                    hits = source_entry.hits
-                    pooled_damage = source_entry.total_damage
-                end
+                -- Store the value of each hit
+                table.insert(hits[type], damage_entry.damage)
             end
 
-            table.insert(hits, damage_entry.damage)
-
-            if #hits > 1 then
-                damage_tooltip = format_damage_tooltip(hits)
+            -- Calculate num_hits here since it needs to be done every frame in the GUI otherwise, and it's a bit involved
+            local num_hits = 0
+            for _, v in pairs(hits) do
+                num_hits = num_hits + #v
             end
+
+            damage_tooltip = format_damage_tooltip(hits)
 
             List.pushright(gui_state.data, {
                 source = source,
-                type = type,
+                type = display_type,
                 damage_text = format_number(damage_entry.damage + pooled_damage),
                 total_damage = damage_entry.damage + pooled_damage,
                 hits = hits,
+                num_hits = num_hits,
                 damage_tooltip = damage_tooltip,
                 hp = format_number(damage_entry.hp),
                 max_hp = format_number(damage_entry.max_hp),

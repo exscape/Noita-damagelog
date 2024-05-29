@@ -270,7 +270,8 @@ function draw_gui()
 
         imgui.TableNextColumn()
 
-        local num_hits = #row_data.hits
+        local num_hits = row_data.num_hits or 0
+
         local damage_text = row_data.damage_text
         if num_hits > 1 and get_setting("highlight_combined_asterisk") then
             damage_text = damage_text .. "*"
@@ -388,6 +389,12 @@ function draw_gui()
         combine_hits_highlight_red("Highlight combined hits in red")
         create_tooltip("Show the damage text in red when a row contains multiple hits.\n" ..
                        "See the tooltip for the previous setting for more info.")
+
+        local combine_different_types_creator = create_widget("combine_different_types", imgui.Checkbox)
+        combine_different_types_creator("Combine hits even when the damage type differs")
+        create_tooltip("In some cases, you're hit with multiple types of damage from the same enemy quickly.\n" ..
+                       "With this setting enabled, they are still combined to a single row, to avoid log spam.\n" ..
+                       "Mouse over the damage number to show the individual hits.")
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
