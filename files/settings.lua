@@ -6,7 +6,6 @@ max_rows_allowed = 60 -- Player has the choice of showing 1 to this many rows
 local _default_settings = {
     -- Behavior
     auto_size_columns = true,
-    combine_similar_hits = true,
     show_log_on_load = false,
     show_on_pause_screen = false,
     auto_show_hide_on_pause = false,

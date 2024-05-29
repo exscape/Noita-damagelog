@@ -55,18 +55,26 @@ local display_gui_after_wand_pickup = nil
 -- Also used for combining near-simultaneous hits (which preserves individual hit info).
 local function fetch_pooling_entry(source, type, max_frame_diff)
     if List.isempty(gui_state.data) then return nil end
-    local prev = List.peekright(gui_state.data)
 
-    if prev.source ~= source or prev.type ~= type then
-        return nil
+    -- Look for a matching entry from the last few rows.
+    -- Preferably, we would only pool to the very last row, but it causes issues in several cases.
+    -- For example: being hit by enemies while on fire (causes many fire rows, one extra per hit), or
+    -- being hit by multiple enemies quickly, or getting hit by many damage types quickly (such as from omega discs).
+    -- All of the above cause log spam if we only pool to the last row.
+
+    -- Note to self: keep in mind this checks 4 rows, not 3 (last, last-1, last-2, last-3)
+    for i = gui_state.data.last, math.max(gui_state.data.first, gui_state.data.last - 3), -1 do
+        local row = gui_state.data[i]
+        if row.source == source and row.type == type then
+            local frame_diff = GameGetFrameNum() - row.frame
+            if frame_diff < (max_frame_diff or 120) then
+                List.pop_at(gui_state.data, i)
+                return row
+            end
+        end
     end
 
-    local frame_diff = GameGetFrameNum() - prev.frame
-    if frame_diff < (max_frame_diff or 120) then
-        return List.popright(gui_state.data)
-    else
-        return nil
-    end
+    return nil
 end
 
 local function format_damage_tooltip(hits)
@@ -150,12 +158,11 @@ function update_gui_data()
                 local source_entry = fetch_pooling_entry(source, type)
 
                 if source_entry ~= nil then
-                    pooled_damage = source_entry.total_damage -- List.popright(gui_state.data).total_damage
+                    pooled_damage = source_entry.total_damage
                 end
-            elseif get_setting("combine_similar_hits") then
+            else
                 -- We might still want to combine this with the previous hit, and show them as a single row.
                 -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
-                -- Allow combining those hits if the user wishes. Each hit is stored and viewable separately.
                 local source_entry = fetch_pooling_entry(source, type, 45)
 
                 if source_entry ~= nil then

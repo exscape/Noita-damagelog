@@ -57,3 +57,24 @@ function List.peekright (list)
     if list.first > last then error("list is empty") end
     return list[last]
 end
+
+-- Note: O(N), but only used at the very end of lists for damagelog, so that's not an issue
+function List.pop_at (list, i)
+    local first = list.first
+    local last = list.last
+    if first > last then error("list is empty") end
+    if i < first or i > last then error("out of bounds") end
+
+    local value = list[i]
+
+    -- Move back everything else in the list one step
+    for j = i, last - 1 do
+      list[j] = list[j+1]
+    end
+
+    -- Delete the last (now unused) entry, and reduce the list size
+    list[last] = nil
+    list.last = list.last - 1
+
+    return value
+  end

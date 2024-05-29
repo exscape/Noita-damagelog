@@ -378,21 +378,16 @@ function draw_gui()
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
-        local combine_hits_creator = create_widget("combine_similar_hits", imgui.Checkbox)
-        combine_hits_creator("Combine similar, near-simultaneous hits into a single row")
-        create_tooltip("Show e.g. the 4 hits of a Hiisi shotgunner as one row of 28, instead of 4 rows of 7.\n" ..
-                       "Mouse over the damage text to show the individual hits.\n" ..
-                       "Some rounding issues can occur, e.g. 2 x 6.4 damage shows as \"2x6\" but the total rounds to 13.")
-
-        imgui.Indent()
-
         local combine_hits_highlight_asterisk = create_widget("highlight_combined_asterisk", imgui.Checkbox)
         combine_hits_highlight_asterisk("Highlight combined hits with an asterisk")
+        create_tooltip("Show an asterisk when a row contains multiple hits (mouse over to show the individual hits).\n" ..
+                       "When multiple hits (such as the 4 hits of a Hiisi shotgunner) occur quickly, they are combined to a single row.\n" ..
+                       "Some rounding issues may occur, e.g. 2 x 6.4 damage would show as \"2x6\" but the total rounds to 13.")
 
         local combine_hits_highlight_red = create_widget("highlight_combined_red", imgui.Checkbox)
         combine_hits_highlight_red("Highlight combined hits in red")
-
-        imgui.Unindent()
+        create_tooltip("Show the damage text in red when a row contains multiple hits.\n" ..
+                       "See the tooltip for the previous setting for more info.")
 
         imgui.Dummy(0, spacing_size * imgui.GetFontSize())
 
