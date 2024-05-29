@@ -53,16 +53,20 @@ local display_gui_after_wand_pickup = nil
 -- Used to check if damage should be added together and shown as one number,
 -- such as for fire (60 times/second!), toxic sludge, poison and some others.
 -- Also used for combining near-simultaneous hits (which preserves individual hit info).
-local function should_pool_damage(source, type, max_frame_diff)
-    if List.isempty(gui_state.data) then return false end
+local function fetch_pooling_entry(source, type, max_frame_diff)
+    if List.isempty(gui_state.data) then return nil end
     local prev = List.peekright(gui_state.data)
 
     if prev.source ~= source or prev.type ~= type then
-        return false
+        return nil
     end
 
     local frame_diff = GameGetFrameNum() - prev.frame
-    return frame_diff < (max_frame_diff or 120)
+    if frame_diff < (max_frame_diff or 120) then
+        return List.popright(gui_state.data)
+    else
+        return nil
+    end
 end
 
 local function format_damage_tooltip(hits)
@@ -136,21 +140,28 @@ function update_gui_data()
 
             -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
             -- if the last damage entry was from the same source *AND* it was recent.
-            -- Note that this uses popright to remove the previous row entirely.
+            -- Note that the previous entry is removed by the fetch method; we simply add it back later.
             local pooled_damage = 0
             local hits = {}
             local damage_tooltip = nil
-            if damage_entry.always_pool and should_pool_damage(source, type) then
+            if damage_entry.always_pool then
                 -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
                 -- Separate hits are not stored (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
-                pooled_damage = List.popright(gui_state.data).total_damage
-            elseif get_setting("combine_similar_hits") and should_pool_damage(source, type, 45) then
+                local source_entry = fetch_pooling_entry(source, type)
+
+                if source_entry ~= nil then
+                    pooled_damage = source_entry.total_damage -- List.popright(gui_state.data).total_damage
+                end
+            elseif get_setting("combine_similar_hits") then
                 -- We might still want to combine this with the previous hit, and show them as a single row.
                 -- There are some cases where you get hit a ton of times almost simultaneously, whether it's 3 or 30 times.
                 -- Allow combining those hits if the user wishes. Each hit is stored and viewable separately.
-                local prev = List.popright(gui_state.data)
-                hits = prev.hits
-                pooled_damage = prev.total_damage
+                local source_entry = fetch_pooling_entry(source, type, 45)
+
+                if source_entry ~= nil then
+                    hits = source_entry.hits
+                    pooled_damage = source_entry.total_damage
+                end
             end
 
             table.insert(hits, damage_entry.damage)
