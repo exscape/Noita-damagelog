@@ -29,7 +29,7 @@ dofile_once("mods/damagelog/files/gui.lua")
     in different Lua contexts, so they can't share larger amounts of data easily.
     It also stores the ID of the latest hit that it has written to a separate global.
 
-    OnWorldPostUpdate then reads the ID of the latest hit and compares it to the highest ID it has seen.
+    handle_input_and_gui (via OnWorldPostUpdate) then reads the ID of the latest hit and compares it to the highest ID it has seen.
     If the latest ID is higher, it calls update_gui_data() which transforms some of the values into GUI-friendly
     strings. It then sets a global telling damage.lua which IDs it has seen, so that damage.lua can remove
     those hits from the List on the next hit, so that they won't be serialized/deserialized and transferred again.
@@ -38,7 +38,7 @@ dofile_once("mods/damagelog/files/gui.lua")
 
     The script uses two different Lua contexts: one for damage.lua, and one for init.lua + gui.lua.
     This is because how Noita works with the LuaComponent scripts, and is something I'd really prefer to not do.
-    Because of the separate contenxts, most data (even technically damage data) is stored outside of damage.lua;
+    Because of the separate contexts, most data (even technically damage data) is stored outside of damage.lua;
     otherwise, we would need to pass large amounts of data back and forth every time we get damaged (or even every frame).
 ]]
 
@@ -61,7 +61,7 @@ local function fetch_pooling_entry(source, type, max_frame_diff)
     -- For example: being hit by enemies while on fire (causes many fire rows, one extra per hit), or
     -- being hit by multiple enemies quickly, or getting hit by many damage types quickly (such as from omega discs).
     -- All of the above cause log spam if we only pool to the last row.
-
+    --
     -- Note to self: keep in mind this checks 4 rows, not 3 (last, last-1, last-2, last-3)
     for i = gui_state.data.last, math.max(gui_state.data.first, gui_state.data.last - 3), -1 do
         local row = gui_state.data[i]
@@ -78,11 +78,6 @@ local function fetch_pooling_entry(source, type, max_frame_diff)
 end
 
 local function format_damage_tooltip(hits)
-    -- Exit early if empty
-    if next(hits) == nil then
-        return nil
-    end
-
     local function format_one_type(hits_of_type)
     -- Given a set of hits, formats a tooltip to show in the UI.
     -- For example: {5.4, 6.89, 5.25, 7.25, 4.13, 4.73} rounds to {5, 7, 5, 7, 4, 5} which formats as "2x7, 3x5, 4"
@@ -123,6 +118,7 @@ local function format_damage_tooltip(hits)
         return out:sub(1, #out - 2)
     end
 
+    -- Generate the tooltip for each different damage type in this set of hits
     tooltip = ""
     for type, hits_of_type in pairs(hits) do
         tooltip = tooltip .. type .. ": " .. format_one_type(hits_of_type) .. "\n"
@@ -161,19 +157,16 @@ function update_gui_data()
             location = initialupper(location)
 
             local display_type = type
-
-            -- Pool damage from fast sources (like fire, once per frame = 60 times per second),
-            -- if the last damage entry was from the same source *AND* it was recent.
-            -- Note that the previous entry is removed by the fetch method; we simply add it back later.
             local pooled_damage = 0
             local hits = {}
             local damage_tooltip = nil
 
-            -- Damage like fire, toxic sludge, poison etc that should always be pooled to a single value.
-            -- Also checks for damage to combine (like multiple hits from a Hiisi shotgunner).
-            -- Separate hits are not stored for some damage (for fire it'd be 60 per second, all identical as long as max HP is unchanged).
-            -- However, the entire sum is stored as a single hit, to prevent weirdness in some cases (like Omega Sawblade).
-            -- For most damage, each hit is stored separately (see code below).
+            -- Pool/combine damage from some sources, if it happened recently.
+            -- Some sources are combined to a single hit, for example fire, toxic sludge, poison and other rapid, recurring damage.
+            -- Other sources are combined with the individual hits stored, like multiple quick attacks from the same enemy of the same type.
+            -- Multiple attacks of *different* damage types (from one enemy) are combined if the user has that setting enabled (on by default).
+            -- Note that the fetch method removes the original damage entry if we are to pool/combine the damage, so we
+            -- simply add a new one regardless of whether we should pool/combine or not, and it all works out.
             local source_entry = fetch_pooling_entry(source, type, choice(damage_entry.always_pool, 120, 90))
 
             if source_entry ~= nil then
@@ -203,7 +196,9 @@ function update_gui_data()
                 num_hits = num_hits + #v
             end
 
-            damage_tooltip = format_damage_tooltip(hits)
+            if num_hits > 1 then
+                damage_tooltip = format_damage_tooltip(hits)
+            end
 
             List.pushright(gui_state.data, {
                 source = source,
@@ -241,8 +236,6 @@ function update_gui_data()
 end
 
 local function activation_hotkey_was_just_pressed()
-    -- NOTE: This requires Noita beta OR a newer build.
-    -- As of this writing (2024-04-08) the main branch was updated to have these methods *today*.
     -- If modifier keys are used, this requires the non-modifier key to be pressed last -- as you're used to.
 
     local use_ctrl = get_setting("activation_ctrl")
