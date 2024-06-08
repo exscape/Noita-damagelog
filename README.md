@@ -6,6 +6,7 @@ It should work on the main branch of Noita (no earlier than April 8 2024, howeve
 ![Standard layout](screenshot_log.png)
 
 There's a fair amount of settings you can customize.
+(This screenshot is outdated, but it has most of the settings.)
 
 ![Settings](screenshot_settings.png)
 
@@ -22,6 +23,27 @@ Here's a screenshot with all columns active. (Columns are toggled by right-click
 * Start or continue your game. The help screen will pop up (once!).
 
 If you continue a previous game, damage taken prior to installing the mod won't be shown.
+
+# Changelog
+
+# v0.9 (2024-06-08)
+
+**New features / improvements:**
+
+* Allow combining damage to previous rows (e.g. when you're hit by an enemy while on fire, there won't be multiple "fire" rows but the same one will be reused)
+* Allow combining damage of different types *from a single source* to one row (e.g. the Slimeball/Limanuljaska -- the green slimy monsters that hit with both projectile and explosion damage). Hover the damage number to view details.
+* Add "log healing" setting. Off by default as it's only really useful with Healing Bolt (not *any* other form of healing including Deadly Heal, Circle of Vigour, hearts, ...)
+
+**Bug fixes:**
+
+* Don't show current HP as 1 after you've died
+* Fix cursed area damage (e.g. between PWs) source showing as "Holy Mountain"
+* Fix possible log data corruption due to an oversight with quote replacement
+* A few other minor fixes behind the scenes that probably won't be noticed
+
+# v0.8 (2024-04-28)
+
+Initial public release. (Though I made no release announcement, so it probably has 0 users.)
 
 # FAQ (that nobody has actually asked yet)
 
