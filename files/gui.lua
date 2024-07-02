@@ -298,14 +298,8 @@ function draw_gui()
         imgui.TableNextColumn()
         imgui.Text(row_data.max_hp)
 
-        -- So this is unfortunately very hacky.
-        -- To keep the GUI time updated in most cases while also not jumping back between
-        -- now -> 1s -> 2s -> now -> ... for some pooled damage, we need to use an exception
-        -- for such damage. There may be more exceptions than these that should be added.
-        -- TODO: ensure this works with non-English languages used in Noita
-        local lower_accuracy = row_data.source == "Toxic sludge" or row_data.source == "Poison"
         imgui.TableNextColumn()
-        imgui.Text(format_time(row_data.time, lower_accuracy))
+        imgui.Text(format_time(row_data.time, row_data.lower_time_accuracy or false))
     end
 
     -- Add popup to right-clicking on any of the columns (except the header)

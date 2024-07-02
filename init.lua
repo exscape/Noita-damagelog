@@ -132,6 +132,8 @@ end
 --- If e.g. on fire it WILL currently update every frame, however, since the damage data changes every frame.
 function update_gui_data()
     local raw_damage_data = load_damage_data()
+    local unknown = "$menuoptions_configurecontrols_keyname_unknown"
+    local unknown_translated = GameTextGet(unknown)
 
     -- Since damage.lua removes all previously read data prior to sending a new batch,
     -- we want to process everything we just received, and don't need to perform any
@@ -140,10 +142,12 @@ function update_gui_data()
         local damage_entry = raw_damage_data[i]
 
         if damage_entry.damage >= 0 or get_setting("log_healing") then
-            local source = damage_entry.source
-            local type = damage_entry.type
-            if source:sub(1, 1) == '$' then source = GameTextGet(source) or "Unknown" end
-            if type:sub(1, 1) == '$' then type = GameTextGet(type) or "Unknown" end
+            local source = damage_entry.source or unknown
+            local type = damage_entry.type or unknown
+            if #source < 1 then source = unknown end
+            if #type < 1 then type = unknown end
+            if source:sub(1, 1) == '$' then source = GameTextGet(source) or unknown_translated end
+            if type:sub(1, 1) == '$' then type = GameTextGet(type) or unknown_translated end
 
             local location
             if damage_entry.location:sub(1, 1) == '$' then
@@ -202,6 +206,7 @@ function update_gui_data()
 
             List.pushright(gui_state.data, {
                 source = source,
+                lower_time_accuracy = damage_entry.lower_time_accuracy,
                 type = display_type,
                 damage_text = format_number(damage_entry.damage + pooled_damage),
                 total_damage = damage_entry.damage + pooled_damage,

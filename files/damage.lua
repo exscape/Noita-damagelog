@@ -92,21 +92,25 @@ local function source_and_type_from_entity_and_message(entity_thats_responsible,
         -- This is terribly ugly, but I'm not sure there's a better way.
         -- For whatever reason, Noita now returns $biome_holymountain as the entity
         -- that causes "cursed area" damage (e.g. when digging towards a PW).
-        -- That causes every other row in the log to be "Holy Mountain" and every other
-        -- to be "Cursed rock", spamming the log with maybe 15-20 rows per second.
         if entity_name == '$biome_holymountain' and orig_message == '$damage_rock_curse' then
-            return orig_message, orig_message
+            return orig_message, orig_message, damage_was_from_material
         end
 
-        return entity_name, damage_type
+        return entity_name, damage_type, damage_was_from_material
     elseif message:sub(1,1) == "$" or damage_was_from_material then
         -- No responsible entity; damage is something like toxic sludge, fire etc.
         -- Show that as the source and type.
-        return damage_type, damage_type
+        -- I don't at all like the hack here, but the only other option I've found is to always use
+        -- the "lower accuracy" mode and have the time display go from "now" to 3s for every damage type.
+        -- I'm not sure about that, most damage is "one-shot" damage and we should be able to show the proper
+        -- time for those.
+        return damage_type,
+        damage_type,
+        damage_was_from_material or damage_type == "$damage_radioactive" or damage_type == "$damage_poison"
     else
         -- Should never happen; displayed for debugging purposes so that the mod can be updated
         log("damagelog WARNING: unknown message: " .. tostring(message))
-        return message, damage_type
+        return message, damage_type, damage_was_from_material
     end
 end
 
@@ -130,7 +134,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
         next_hit_id = tonumber(GlobalsGetValue("damagelog_highest_id_written", "0")) + 1
     end
 
-    local source, damage_type = source_and_type_from_entity_and_message(entity_thats_responsible, message)
+    local source, damage_type, lower_time_accuracy = source_and_type_from_entity_and_message(entity_thats_responsible, message)
     damage = damage * 25 -- TODO: use magic number? (GUI_HP_MULTIPLIER)
 
     local hp, max_hp = get_player_health()
@@ -162,6 +166,7 @@ function damage_received(damage, message, entity_thats_responsible, is_fatal, pr
     List.pushright(damage_data, {
         source = source,
         type = damage_type,
+        lower_time_accuracy = lower_time_accuracy,
         damage = damage,
         hp = hp_after,
         max_hp = max_hp,
