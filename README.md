@@ -1,7 +1,9 @@
-# damagelog
+# A damage log for Noita
 
-damagelog is a Noita mod that shows a list of the the damage you've taken.  
-It should work on the main branch of Noita (no earlier than April 8 2024, however!) and the beta branch.
+damagelog is a [Noita](https://store.steampowered.com/app/881100/Noita/) mod that shows a list of the the damage you've taken, and from what sources.  
+The log window can be toggled with a hotkey, or shown automatically when in the pause menu.
+
+The mod should work on the main branch of Noita (no earlier than April 8 2024, however!) and the beta branch.  
 
 ![Standard layout](screenshot_log.png)
 
@@ -87,6 +89,6 @@ If the setting to show the log when paused is enabled, it will also show up over
 **Workaround** if you use those often: disable the setting to open/close the log on pause/unpause, and and pause + toggle the log manually when you actually want to view it.
 
 Circle of Vigour causes small amounts of healing to show up in the log (about 10 hp), even though it heals far more.  
-This is because Noita signals the mod (via the function damage_received, with negative damage values) only for a few particles, while the regeneration effect is what does most of the healing.
+This is because Noita signals the mod (via the function damage\_received, with negative damage values) only for a few particles, while the regeneration effect is what does most of the healing.
 
 Sometimes "Source" shows up as "Unknown". This typically happens when you get hit by an enemy after their death, and Noita can't provide information about the entity.
